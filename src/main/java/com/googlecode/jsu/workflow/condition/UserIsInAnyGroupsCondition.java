@@ -50,8 +50,12 @@ public class UserIsInAnyGroupsCondition extends AbstractJiraCondition {
             Collection<Group> groupsSelected = workflowUtils.getGroups(strGroupsSelected, WorkflowUtils.SPLITTER);
 
             for (Group group : groupsSelected) {
-                if (crowdService.isUserMemberOfGroup(userLogged, group)) {
-                    return true;
+                try {
+                    if (crowdService.isUserMemberOfGroup(userLogged, group)) {
+                        return true;
+                    }
+                } catch (Exception e) {
+                    //see JSUTIL-68
                 }
             }
         }
