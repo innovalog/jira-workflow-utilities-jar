@@ -357,6 +357,8 @@ public class WorkflowUtils {
                 if ("SchemeIssueSecurityLevels".equals(gv.getEntityName())) { // We got security level
                     newValue = gv.getString("name");
                 }
+            } else if (value instanceof Option && ! (cfType instanceof MultipleSettableCustomFieldType)) {
+                newValue = ((Option) newValue).getValue();
             }
 
             if (cfType instanceof VersionCFType) {
@@ -396,14 +398,13 @@ public class WorkflowUtils {
 
                     newValue = cfType.getValueFromCustomFieldParams(fieldParams);
                 }
-            } else if (newValue instanceof Option && ! (cfType instanceof MultipleSettableCustomFieldType)) {
-                if (cfType instanceof MultiGroupCFType) {
-                    // Wants a Collection of String
-                    newValue = ((Option) newValue).getValue();
-                    newValue = asArrayList(newValue);
-                } else {
-                    newValue = ((Option) newValue).getValue();
+            } else if (cfType instanceof UserCFType) {
+                newValue = convertValueToUser(newValue);
+            } else if (cfType instanceof AbstractMultiCFType) {
+                if (cfType instanceof MultiUserCFType) {
+                    newValue = convertValueToUser(newValue);
                 }
+                newValue = asArrayList(newValue.toString());
             }
 
             if (log.isDebugEnabled()) {
