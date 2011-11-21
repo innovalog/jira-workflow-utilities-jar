@@ -80,6 +80,12 @@ public class FieldsRequiredValidator extends GenericValidator {
                     } catch (Exception e) {
                         fieldValue = null; //No attachments.
                     }
+                } else if (IssueFieldConstants.TIME_SPENT.equals(field.getId())) {
+                    try {
+                        fieldValue = ((MutableIssue) issue).getModifiedFields().get(IssueFieldConstants.WORKLOG).getNewValue();
+                    } catch (Exception e) {
+                        fieldValue = null; //No time spent.
+                    }
                 } else {
                     fieldValue = workflowUtils.getFieldValueFromIssue(issue, field);
                 }

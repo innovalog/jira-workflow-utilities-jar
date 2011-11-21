@@ -85,7 +85,8 @@ public class FieldCollectionsUtils {
             IssueFieldConstants.TIME_ESTIMATE,
             IssueFieldConstants.TIME_ORIGINAL_ESTIMATE,
             IssueFieldConstants.TIME_SPENT,
-            IssueFieldConstants.TIMETRACKING
+            IssueFieldConstants.TIMETRACKING,
+            IssueFieldConstants.WORKLOG
     );
 
     private final I18nHelper.BeanFactory i18nHelper;
@@ -228,8 +229,9 @@ public class FieldCollectionsUtils {
             while(itFields.hasNext() && !retVal){
                 FieldScreenLayoutItem fieldScreenLayoutItem = itFields.next();
 
-                if (field.getId().equals(fieldScreenLayoutItem.getFieldId()) && isIssueHasField(issue, field) ||
-                    TIME_TRACKING_FIELDS.contains(field.getId()) && IssueFieldConstants.TIMETRACKING.equals(fieldScreenLayoutItem.getFieldId())) {
+                if ( (field.getId().equals(fieldScreenLayoutItem.getFieldId()) && isIssueHasField(issue, field)) ||
+                     (TIME_TRACKING_FIELDS.contains(field.getId()) && TIME_TRACKING_FIELDS.contains(fieldScreenLayoutItem.getFieldId()) ) //time tracking fields are not really clear...
+                   ) {
                     retVal = true;
                 }
             }
