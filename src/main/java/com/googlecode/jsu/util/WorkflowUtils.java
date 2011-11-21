@@ -695,6 +695,17 @@ public class WorkflowUtils {
     }
 
     private User convertValueToUser(Object value) {
+        if (value instanceof Collection<?>) {
+            int s = ((Collection) value).size();
+            if (s == 0) {
+                value = null;
+            } else {
+                if (s > 1) {
+                    log.debug("Got multiple values to set as user. Using only one of them.");
+                }
+                value = ((Collection) value).iterator().next();
+            }
+        }
         if (value == null || value instanceof User) {
             return  (User) value;
         } else if (value instanceof String) {
