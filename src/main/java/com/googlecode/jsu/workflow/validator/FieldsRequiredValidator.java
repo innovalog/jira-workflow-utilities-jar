@@ -5,8 +5,10 @@ import static com.googlecode.jsu.helpers.ConditionCheckerFactory.STRING;
 import static com.googlecode.jsu.workflow.WorkflowFieldsRequiredValidatorPluginFactory.SELECTED_FIELDS;
 
 import java.util.Collection;
+import java.util.List;
 
 import com.atlassian.jira.issue.IssueFieldConstants;
+import com.atlassian.jira.issue.MutableIssue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,6 +73,13 @@ public class FieldsRequiredValidator extends GenericValidator {
                 Object fieldValue;
                 if (IssueFieldConstants.COMMENT.equals(field.getId())) {
                     fieldValue = getTransitionComment();
+                } else if (IssueFieldConstants.ATTACHMENT.equals(field.getId())) {
+                    try {
+                        //Actually what we get here are is just the id of the first attahcment. - If there is an attachment at all.
+                        fieldValue = ((List<Long>) ((MutableIssue) issue).getModifiedFields().get(IssueFieldConstants.ATTACHMENT).getNewValue()).get(0);
+                    } catch (Exception e) {
+                        fieldValue = null; //No attachments.
+                    }
                 } else {
                     fieldValue = workflowUtils.getFieldValueFromIssue(issue, field);
                 }
