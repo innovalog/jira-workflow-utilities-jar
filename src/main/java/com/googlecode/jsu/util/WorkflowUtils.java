@@ -42,11 +42,13 @@ import com.opensymphony.workflow.loader.AbstractDescriptor;
 import com.opensymphony.workflow.loader.ActionDescriptor;
 import com.opensymphony.workflow.loader.FunctionDescriptor;
 import org.apache.commons.lang.StringUtils;
+import org.ofbiz.core.entity.GenericEntity;
 import org.ofbiz.core.entity.GenericEntityException;
 import org.ofbiz.core.entity.GenericValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Method;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -640,6 +642,35 @@ public class WorkflowUtils {
         }
     }
 
+    public String convertToString(Object value) {
+        if (value == null || value instanceof String) {
+            return (String) value;
+        } else if (value instanceof Collection) {
+            return convertToString(firstValue((Collection) value));
+        } else if (value instanceof Option) {
+            return ((Option) value).getValue();
+        } else if (value instanceof GenericEntity) {
+            String s = ((GenericEntity) value).getString("name");
+            if (StringUtils.isEmpty(s)) {
+                s = ((GenericEntity) value).getString("id");
+                if (StringUtils.isEmpty(s)) {
+                    s = value.toString();
+                }
+            }
+            return s;
+        } else {
+            try {
+                Method getName = value.getClass().getMethod("getName");
+                return getName.invoke(value).toString();
+            } catch (Exception e) { /* try getId() ... */ }
+            try {
+                Method getId = value.getClass().getMethod("getId");
+                return getId.invoke(value).toString();
+            } catch (Exception e) { /* use toString() ... */ }
+            return value.toString();
+        }
+    }
+
     private Option convertStringToOption(Issue issue, CustomField customField, String value) {
         FieldConfig relevantConfig = customField.getRelevantConfig(issue);
         List<Option> options = optionsManager.findByOptionValue(value);
@@ -662,60 +693,53 @@ public class WorkflowUtils {
     private Collection<GenericValue> convertValueToComponents(Issue issue, Object value) {
         if (value == null) {
             return Collections.<GenericValue>emptySet();
-        } else if (value instanceof String) {
+        } else if (value instanceof GenericValue) {
+            return Arrays.asList((GenericValue) value);
+        } else if (value instanceof Collection) {
+            return (Collection<GenericValue>) value;
+        } else {
             ProjectComponent v = projectComponentManager.findByComponentName(
-                    issue.getProjectObject().getId(), (String) value
+                    issue.getProjectObject().getId(), convertToString(value)
             );
 
             if (v != null) {
                 return Arrays.asList(v.getGenericValue());
             }
-        } else if (value instanceof GenericValue) {
-            return Arrays.asList((GenericValue) value);
-        } else if (value instanceof Collection) {
-            return (Collection<GenericValue>) value;
+            throw new IllegalArgumentException("Wrong component value '" + value + "'.");
         }
-        throw new IllegalArgumentException("Wrong component value '" + value + "'.");
     }
 
     private Collection<Version> convertValueToVersions(Issue issue, Object value) {
         if (value == null) {
             return Collections.emptySet();
-        } else if (value instanceof String) {
-            Version v = versionManager.getVersion(issue.getProjectObject().getId(), (String) value);
-            if (v != null) {
-                return Arrays.asList(v);
-            }
         } else if (value instanceof Version) {
             return (Arrays.asList((Version) value));
         } else if (value instanceof Collection) {
             return (Collection<Version>) value;
+        } else {
+            Version v = versionManager.getVersion(issue.getProjectObject().getId(), convertToString(value));
+            if (v != null) {
+                return Arrays.asList(v);
+            }
+            throw new IllegalArgumentException("Wrong version value '" + value + "'.");
         }
-        throw new IllegalArgumentException("Wrong version value '" + value + "'.");
     }
 
     private User convertValueToUser(Object value) {
         if (value instanceof Collection<?>) {
-            int s = ((Collection) value).size();
-            if (s == 0) {
-                value = null;
-            } else {
-                if (s > 1) {
-                    log.debug("Got multiple values to set as user. Using only one of them.");
-                }
-                value = ((Collection) value).iterator().next();
-            }
+            value = firstValue((Collection) value);
         }
         if (value == null || value instanceof User) {
             return  (User) value;
-        } else if (value instanceof String) {
-            User user = userManager.getUserObject((String) value);
+        } else {
+            User user = userManager.getUserObject(convertToString(value));
             if (user != null) {
                 return user;
             }
+            throw new IllegalArgumentException("User '" + value + "' not found.");
         }
-        throw new IllegalArgumentException("User '" + value + "' not found.");
     }
+
 
     private GenericValue convertValueToProject(Object value) {
         GenericValue project;
@@ -727,7 +751,7 @@ public class WorkflowUtils {
             project = projectManager.getProject((Long) value);
             if (project != null) return project;
         } else {
-            String s = value.toString();
+            String s = convertToString(value);
             try {
                 Long id = Long.parseLong(s);
                 project = projectManager.getProject(id);
@@ -764,6 +788,18 @@ public class WorkflowUtils {
         ArrayList<T> list = new ArrayList<T>(1);
         list.add(value);
         return list;
+    }
+
+    private Object firstValue(Collection col) {
+        int s = col.size();
+        if (s == 0) {
+            return null;
+        } else {
+            if (s > 1) {
+                log.debug("Got multiple values: " + col.toString() + ". Using only one of them.");
+            }
+            return col.iterator().next();
+        }
     }
 
     /**
