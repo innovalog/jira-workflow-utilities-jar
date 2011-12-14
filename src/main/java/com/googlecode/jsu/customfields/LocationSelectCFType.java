@@ -6,6 +6,7 @@ import com.atlassian.jira.issue.customfields.impl.SelectCFType;
 import com.atlassian.jira.issue.customfields.manager.GenericConfigManager;
 import com.atlassian.jira.issue.customfields.manager.OptionsManager;
 import com.atlassian.jira.issue.customfields.persistence.CustomFieldValuePersister;
+import com.atlassian.jira.issue.fields.rest.json.beans.JiraBaseUrls;
 
 /**
  * Wrapper on Jira SelectCFType for using inside plugins v2.
@@ -16,18 +17,16 @@ import com.atlassian.jira.issue.customfields.persistence.CustomFieldValuePersist
 public class LocationSelectCFType extends SelectCFType {
     /**
      * @param customFieldValuePersister
-     * @param stringConverter
-     * @param selectConverter
      * @param optionsManager
      * @param genericConfigManager
+     * @param jiraBaseUrls
      */
     public LocationSelectCFType(
             CustomFieldValuePersister customFieldValuePersister,
-            StringConverter stringConverter,
-            SelectConverter selectConverter,
             OptionsManager optionsManager,
-            GenericConfigManager genericConfigManager
+            GenericConfigManager genericConfigManager,
+            JiraBaseUrls jiraBaseUrls
     ) {
-        super(customFieldValuePersister, stringConverter, selectConverter, optionsManager, genericConfigManager);
+        super(customFieldValuePersister, optionsManager, genericConfigManager, jiraBaseUrls);
     }
 }

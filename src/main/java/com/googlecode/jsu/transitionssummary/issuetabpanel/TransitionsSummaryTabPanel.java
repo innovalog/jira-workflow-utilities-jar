@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.atlassian.crowd.embedded.api.User;
 import com.atlassian.jira.issue.Issue;
 import com.atlassian.jira.issue.tabpanels.GenericMessageAction;
 import com.atlassian.jira.plugin.issuetabpanel.IssueAction;
@@ -12,7 +13,6 @@ import com.atlassian.jira.plugin.issuetabpanel.IssueTabPanelModuleDescriptor;
 import com.atlassian.jira.user.util.UserManager;
 import com.googlecode.jsu.transitionssummary.TransitionSummary;
 import com.googlecode.jsu.transitionssummary.TransitionsManager;
-import com.opensymphony.user.User; //In JIRA 4.3 interface IssueTabPanel is still using deprecated User.
 
 /**
  * @author Gustavo Martin
@@ -37,6 +37,7 @@ public class TransitionsSummaryTabPanel implements IssueTabPanel {
      */
     public void init(IssueTabPanelModuleDescriptor descriptor) {
         this.descriptor = descriptor;
+        
     }
 
     /* (non-Javadoc)

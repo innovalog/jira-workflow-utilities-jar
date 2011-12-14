@@ -37,7 +37,7 @@ import com.atlassian.jira.project.version.VersionManager;
 import com.atlassian.jira.user.util.UserManager;
 import com.atlassian.jira.util.ObjectUtils;
 import com.atlassian.jira.workflow.WorkflowActionsBean;
-import com.opensymphony.user.Entity;
+//import com.opensymphony.user.Entity;
 import com.opensymphony.workflow.loader.AbstractDescriptor;
 import com.opensymphony.workflow.loader.ActionDescriptor;
 import com.opensymphony.workflow.loader.FunctionDescriptor;
@@ -351,8 +351,10 @@ public class WorkflowUtils {
 
             if (value instanceof IssueConstant) {
                 newValue = ((IssueConstant) value).getName();
+                /* TODO Where the heck was Entity used???
             } else if (value instanceof Entity) {
                 newValue = ((Entity) value).getName();
+                */
             } else if (value instanceof GenericValue) {
                 final GenericValue gv = (GenericValue) value;
 

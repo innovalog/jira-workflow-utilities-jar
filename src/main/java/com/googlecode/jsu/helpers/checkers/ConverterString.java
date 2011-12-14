@@ -6,7 +6,8 @@ import org.ofbiz.core.entity.GenericValue;
 
 import com.atlassian.jira.issue.IssueConstant;
 import com.atlassian.jira.project.Project;
-import com.opensymphony.user.Entity;
+//import com.opensymphony.user.Entity;
+
 
 import java.util.Collection;
 
@@ -27,9 +28,9 @@ class ConverterString implements ValueConverter {
 
         if (object instanceof IssueConstant) {
             result = ((IssueConstant) object).getName();
-        } else if (object instanceof Entity) {
+        } /*else if (object instanceof Entity) {
             result = ((Entity) object).getName();
-        } else if (object instanceof Project) {
+        }*/ else if (object instanceof Project) {
             result = ((Project) object).getKey();
         } else if (object instanceof GenericValue) {
             final GenericValue gv = (GenericValue) object;
