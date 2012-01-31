@@ -2,10 +2,11 @@
 
     <modelVersion>4.0.0</modelVersion>
 
+    
     <groupId>com.googlecode</groupId>
     <artifactId>jira-suite-utilities</artifactId>
     <name>JIRA Suite Utilities</name>
-    <version>1.2.1-SNAPSHOT</version>
+    <version>1.2.3</version>
     <packaging>atlassian-plugin</packaging>
 
     <organization>
@@ -142,12 +143,12 @@
         <repository>
             <id>atlassian-contrib</id>
             <name>Atlassian Contrib Repository</name>
-            <url>https://maven.atlassian.com/content/repositories/atlassian-contrib</url>
+            <url>https://maven.atlassian.com/contrib</url>
         </repository>
         <snapshotRepository>
             <id>atlassian-contrib-snapshot</id>
             <name>Atlassian Contrib Snapshot Repository</name>
-            <url>https://maven.atlassian.com/content/repositories/atlassian-contrib-snapshot</url>
+            <url>https://maven.atlassian.com/contrib-snapshot</url>
         </snapshotRepository>
     </distributionManagement>
 
