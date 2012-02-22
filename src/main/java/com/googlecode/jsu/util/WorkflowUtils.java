@@ -186,7 +186,7 @@ public class WorkflowUtils {
                         }
                     }
                 } else {
-                    retVal = value;
+                    retVal = value; 
                 }
 
                 if (log.isDebugEnabled()) {
