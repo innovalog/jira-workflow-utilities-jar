@@ -85,7 +85,7 @@ public class UserIsInCustomFieldCondition extends AbstractJiraCondition {
         boolean result = !allowUserInField;
 
         if (fieldValue instanceof String) {
-            if (fieldValue.equals(user.toString())) {
+            if (fieldValue.equals(user.getName())) {
                 result = allowUserInField;
             }
         } else {

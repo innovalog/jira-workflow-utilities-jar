@@ -53,7 +53,7 @@ public class UpdateIssueCustomFieldPostFunction extends AbstractPreserveChangesP
             try {
                 User currentUser = getCaller(transientVars, args);
 
-                fieldValue = currentUser.toString();
+                fieldValue = currentUser.getName();
             } catch (Exception e) {
                 log.error("Unable to find caller for function", e);
             }
