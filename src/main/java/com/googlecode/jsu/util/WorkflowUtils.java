@@ -167,11 +167,11 @@ public class WorkflowUtils {
                 Object value = issue.getCustomFieldValue(customField);
 
                 if (customField.getCustomFieldType() instanceof CascadingSelectCFType) {
-                    CustomFieldParams params = (CustomFieldParams) value;
+                    HashMap<String, Option> hashMapEntries = (HashMap<String, Option>) value;
 
-                    if (params != null) {
-                        Option parent = (Option) params.getFirstValueForKey(CascadingSelectCFType.PARENT_KEY);
-                        Option child = (Option) params.getFirstValueForKey(CascadingSelectCFType.CHILD_KEY);
+                    if (hashMapEntries != null) {
+                        Option parent =  hashMapEntries.get(CascadingSelectCFType.PARENT_KEY);
+                        Option child =  hashMapEntries.get(CascadingSelectCFType.CHILD_KEY);
 
                         if (parent != null) {
                             if (ObjectUtils.isValueSelected(child)) {
