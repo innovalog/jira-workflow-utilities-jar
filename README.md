@@ -1,7 +1,5 @@
-JIRA Suite Utilities
-====================
+JIRA Workflow Utilities JAR
+===========================
 
-This is the source code for the JIRA Suite Utilities plugin.
-
-* **Home Page**: https://plugins.atlassian.com/plugin/details/5048
-* **Issue Tracking**: https://studio.plugins.atlassian.com/browse/JSUTIL
+This is the source code for the JIRA Workflow Utilities JAR.
+this JAR is used by several Jira plugins, including JMWE and JMCF.

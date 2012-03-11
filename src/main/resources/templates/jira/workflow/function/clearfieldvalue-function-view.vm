@@ -1,5 +1,0 @@
-The field 
-#if(${selectedField})
-    <b>${selectedField.name}</b>
-#end
- will be purged.
