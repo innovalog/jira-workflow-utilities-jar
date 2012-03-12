@@ -369,7 +369,6 @@ public class FieldCollectionsUtils {
                 ISSUE_KEY,
                 ISSUE_LINKS,
                 ISSUE_TYPE,
-                PRIORITY,
                 PROJECT,
                 SUBTASKS,
                 THUMBNAIL,

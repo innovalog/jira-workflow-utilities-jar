@@ -6,6 +6,7 @@ import com.atlassian.crowd.embedded.api.User;
 import com.atlassian.jira.ComponentManager;
 import com.atlassian.jira.bc.project.component.ProjectComponent;
 import com.atlassian.jira.bc.project.component.ProjectComponentManager;
+import com.atlassian.jira.config.PriorityManager;
 import com.atlassian.jira.config.properties.APKeys;
 import com.atlassian.jira.config.properties.ApplicationProperties;
 import com.atlassian.jira.issue.*;
@@ -25,6 +26,7 @@ import com.atlassian.jira.issue.fields.layout.field.FieldLayoutItem;
 import com.atlassian.jira.issue.fields.layout.field.FieldLayoutStorageException;
 import com.atlassian.jira.issue.fields.screen.FieldScreen;
 import com.atlassian.jira.issue.link.IssueLinkManager;
+import com.atlassian.jira.issue.priority.Priority;
 import com.atlassian.jira.issue.resolution.Resolution;
 import com.atlassian.jira.issue.security.IssueSecurityLevelManager;
 import com.atlassian.jira.issue.status.Status;
@@ -41,7 +43,6 @@ import com.atlassian.jira.workflow.WorkflowActionsBean;
 import com.opensymphony.workflow.loader.AbstractDescriptor;
 import com.opensymphony.workflow.loader.ActionDescriptor;
 import com.opensymphony.workflow.loader.FunctionDescriptor;
-import org.apache.commons.httpclient.util.TimeoutController;
 import org.apache.commons.lang.StringUtils;
 import org.ofbiz.core.entity.GenericEntity;
 import org.ofbiz.core.entity.GenericEntityException;
@@ -55,6 +56,8 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+
+//import com.opensymphony.user.Entity;
 
 /**
  * @author Gustavo Martin.
@@ -80,7 +83,7 @@ public class WorkflowUtils {
     private final CrowdService crowdService;
     private final OptionsManager optionsManager;
     private final ProjectManager projectManager;
-
+    private final PriorityManager priorityManager;
     /**
      * @param fieldManager
      * @param issueManager
@@ -97,7 +100,7 @@ public class WorkflowUtils {
             IssueSecurityLevelManager issueSecurityLevelManager, ApplicationProperties applicationProperties,
             FieldCollectionsUtils fieldCollectionsUtils, IssueLinkManager issueLinkManager,
             UserManager userManager, CrowdService crowdService, OptionsManager optionsManager,
-            ProjectManager projectManager) {
+            ProjectManager projectManager, PriorityManager priorityManager) {
         this.fieldManager = fieldManager;
         this.issueManager = issueManager;
         this.projectComponentManager = projectComponentManager;
@@ -110,6 +113,7 @@ public class WorkflowUtils {
         this.crowdService = crowdService;
         this.optionsManager = optionsManager;
         this.projectManager = projectManager;
+        this.priorityManager = priorityManager;
     }
 
     /**
@@ -526,7 +530,10 @@ public class WorkflowUtils {
                 if (value == null) {
                     issue.setPriority(null);
                 } else {
-                    throw new UnsupportedOperationException("Not implemented");
+                    Priority priority = convertValueToPriority(value);
+                    if (priority != null) {
+                        issue.setPriorityObject(priority);
+                    } //else leave it untouched.
                 }
             } else if (fieldId.equals(IssueFieldConstants.RESOLUTION)) {
                 if (value == null) {
@@ -773,6 +780,38 @@ public class WorkflowUtils {
             }
         }
         throw new IllegalArgumentException("Wrong project value '" + value + "'.");
+    }
+
+    private Priority convertValueToPriority(Object value) {
+        if (value == null) {
+            return null;
+        }
+
+        Priority priority;
+        if (value instanceof Priority) {
+            return (Priority) value;
+        } else {
+            String priorityAsString = value.toString();
+            priority = priorityManager.getPriority(priorityAsString);
+            if (priority == null) {
+                for (Priority searchPriority : priorityManager.getPriorities()) {
+                    if (priorityAsString.equals(searchPriority.getName())) {
+                        priority = searchPriority;
+                        break;
+                    }
+                }
+            }
+            if (priority == null) {
+                String defaultLocale = applicationProperties.getDefaultLocale().toString();
+                for (Priority searchPriority : priorityManager.getPriorities()) {
+                    if (priorityAsString.equals(searchPriority.getNameTranslation(defaultLocale))) {
+                        priority = searchPriority;
+                        break;
+                    }
+                }
+            }
+        }
+        return priority;
     }
 
     private CustomFieldParamsImpl convertOptionToCustomFieldParamsImpl(CustomField customField, Option option) {
