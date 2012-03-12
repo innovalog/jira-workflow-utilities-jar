@@ -1,50 +1,7 @@
 package com.googlecode.jsu.util;
 
-import static com.atlassian.jira.issue.IssueFieldConstants.AGGREGATE_PROGRESS;
-import static com.atlassian.jira.issue.IssueFieldConstants.AGGREGATE_TIME_ESTIMATE;
-import static com.atlassian.jira.issue.IssueFieldConstants.AGGREGATE_TIME_ORIGINAL_ESTIMATE;
-import static com.atlassian.jira.issue.IssueFieldConstants.ATTACHMENT;
-import static com.atlassian.jira.issue.IssueFieldConstants.COMMENT;
-import static com.atlassian.jira.issue.IssueFieldConstants.COMPONENTS;
-import static com.atlassian.jira.issue.IssueFieldConstants.CREATED;
-import static com.atlassian.jira.issue.IssueFieldConstants.ISSUE_KEY;
-import static com.atlassian.jira.issue.IssueFieldConstants.ISSUE_LINKS;
-import static com.atlassian.jira.issue.IssueFieldConstants.ISSUE_TYPE;
-import static com.atlassian.jira.issue.IssueFieldConstants.PRIORITY;
-import static com.atlassian.jira.issue.IssueFieldConstants.PROGRESS;
-import static com.atlassian.jira.issue.IssueFieldConstants.PROJECT;
-import static com.atlassian.jira.issue.IssueFieldConstants.STATUS;
-import static com.atlassian.jira.issue.IssueFieldConstants.SUBTASKS;
-import static com.atlassian.jira.issue.IssueFieldConstants.THUMBNAIL;
-import static com.atlassian.jira.issue.IssueFieldConstants.TIMETRACKING;
-import static com.atlassian.jira.issue.IssueFieldConstants.TIME_ESTIMATE;
-import static com.atlassian.jira.issue.IssueFieldConstants.TIME_ORIGINAL_ESTIMATE;
-import static com.atlassian.jira.issue.IssueFieldConstants.TIME_SPENT;
-import static com.atlassian.jira.issue.IssueFieldConstants.UPDATED;
-import static com.atlassian.jira.issue.IssueFieldConstants.VOTES;
-import static com.atlassian.jira.issue.IssueFieldConstants.WORKRATIO;
-
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.TreeSet;
-
-import org.ofbiz.core.entity.model.ModelEntity;
-import org.ofbiz.core.entity.model.ModelField;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.atlassian.core.ofbiz.CoreFactory;
 import com.atlassian.jira.config.properties.ApplicationProperties;
+import com.atlassian.jira.datetime.DateTimeFormatter;
 import com.atlassian.jira.issue.CustomFieldManager;
 import com.atlassian.jira.issue.Issue;
 import com.atlassian.jira.issue.IssueFieldConstants;
@@ -53,24 +10,25 @@ import com.atlassian.jira.issue.customfields.impl.DateCFType;
 import com.atlassian.jira.issue.customfields.impl.DateTimeCFType;
 import com.atlassian.jira.issue.customfields.impl.ImportIdLinkCFType;
 import com.atlassian.jira.issue.customfields.impl.ReadOnlyCFType;
-import com.atlassian.jira.issue.fields.CustomField;
-import com.atlassian.jira.issue.fields.Field;
-import com.atlassian.jira.issue.fields.FieldException;
-import com.atlassian.jira.issue.fields.FieldManager;
-import com.atlassian.jira.issue.fields.NavigableField;
+import com.atlassian.jira.issue.fields.*;
 import com.atlassian.jira.issue.fields.config.FieldConfig;
 import com.atlassian.jira.issue.fields.layout.field.FieldLayout;
 import com.atlassian.jira.issue.fields.layout.field.FieldLayoutItem;
 import com.atlassian.jira.issue.fields.layout.field.FieldLayoutManager;
-import com.atlassian.jira.issue.fields.layout.field.FieldLayoutStorageException;
 import com.atlassian.jira.issue.fields.screen.FieldScreen;
 import com.atlassian.jira.issue.fields.screen.FieldScreenLayoutItem;
 import com.atlassian.jira.issue.fields.screen.FieldScreenTab;
 import com.atlassian.jira.util.I18nHelper;
 import com.atlassian.jira.util.I18nHelper.BeanFactory;
 import com.atlassian.jira.web.FieldVisibilityManager;
-import com.atlassian.jira.web.util.OutlookDateManager;
 import com.googlecode.jsu.helpers.NameComparatorEx;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.sql.Timestamp;
+import java.util.*;
+
+import static com.atlassian.jira.issue.IssueFieldConstants.*;
 
 /**
  * This utils class exposes common methods to get field collections.
@@ -91,7 +49,7 @@ public class FieldCollectionsUtils {
 
     private final I18nHelper.BeanFactory i18nHelper;
     private final ApplicationProperties applicationProperties;
-    private final OutlookDateManager outlookDateManager;
+    private final DateTimeFormatter dateTimeFormatter;
     private final FieldManager fieldManager;
     private final FieldLayoutManager fieldLayoutManager;
     private final CustomFieldManager customFieldManager;
@@ -100,7 +58,7 @@ public class FieldCollectionsUtils {
     /**
      * @param i18nHelper
      * @param applicationProperties
-     * @param outlookDateManager
+     * @param dateTimeFormatter
      * @param fieldManager
      * @param fieldLayoutManager
      * @param customFieldManager
@@ -108,14 +66,14 @@ public class FieldCollectionsUtils {
      */
     public FieldCollectionsUtils(
             BeanFactory i18nHelper, ApplicationProperties applicationProperties,
-            OutlookDateManager outlookDateManager, FieldManager fieldManager,
+            DateTimeFormatter dateTimeFormatter, FieldManager fieldManager,
             FieldLayoutManager fieldLayoutManager,
             CustomFieldManager customFieldManager,
             FieldVisibilityManager fieldVisibilityManager
     ) {
         this.i18nHelper = i18nHelper;
         this.applicationProperties = applicationProperties;
-        this.outlookDateManager = outlookDateManager;
+        this.dateTimeFormatter = dateTimeFormatter;
         this.fieldManager = fieldManager;
         this.fieldLayoutManager = fieldLayoutManager;
         this.customFieldManager = customFieldManager;
@@ -183,19 +141,12 @@ public class FieldCollectionsUtils {
                 allDateFields.add(cfDate);
             }
         }
-
-        // Obtain all fields type date from model.
-        ModelEntity modelIssue = CoreFactory.getGenericDelegator().getModelEntity("Issue");
-        Iterator<ModelField> modelFields = modelIssue.getFieldsIterator();
-
-        while (modelFields.hasNext()) {
-            ModelField modelField = modelFields.next();
-
-            if(modelField.getType().equals("date-time")){
-                Field fldDate = fieldManager.getField(modelField.getName());
-                allDateFields.add(fldDate);
-            }
-        }
+        allDateFields.addAll(
+                Arrays.asList(
+                        fieldManager.getField(IssueFieldConstants.DUE_DATE),
+                        fieldManager.getField(IssueFieldConstants.CREATED),
+                        fieldManager.getField(IssueFieldConstants.UPDATED),
+                        fieldManager.getField(IssueFieldConstants.RESOLUTION_DATE)));
 
         return sortFields(allDateFields);
     }
@@ -280,7 +231,7 @@ public class FieldCollectionsUtils {
         return true;
     }
 
-    public FieldLayoutItem getFieldLayoutItem(Issue issue, Field field) throws FieldLayoutStorageException {
+    public FieldLayoutItem getFieldLayoutItem(Issue issue, Field field) {
                 FieldLayout layout = fieldLayoutManager.getFieldLayout(
                 issue.getProjectObject(),
                 issue.getIssueTypeObject().getId()
@@ -300,17 +251,11 @@ public class FieldCollectionsUtils {
      */
     public boolean isFieldRequired(Issue issue, Field field) {
         boolean retVal = false;
+        FieldLayoutItem fieldLayoutItem = getFieldLayoutItem(issue, field);
 
-        try {
-            FieldLayoutItem fieldLayoutItem = getFieldLayoutItem(issue, field);
-
-            if (fieldLayoutItem != null) {
-                retVal = fieldLayoutItem.isRequired();
-            }
-        } catch (FieldLayoutStorageException e) {
-            log.error("Unable to check is field required", e);
+        if (fieldLayoutItem != null) {
+            retVal = fieldLayoutItem.isRequired();
         }
-
         return retVal;
     }
 
@@ -467,9 +412,7 @@ public class FieldCollectionsUtils {
      */
     public String getNiceDate(Timestamp tsDate){
         Date timePerformed = new Date(tsDate.getTime());
-        Locale defaultLocale = applicationProperties.getDefaultLocale();
-
-        return outlookDateManager.getOutlookDate(defaultLocale).formatDMYHMS(timePerformed);
+        return dateTimeFormatter.format(timePerformed);
     }
 
     /**

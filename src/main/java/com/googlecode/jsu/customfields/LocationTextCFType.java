@@ -14,14 +14,12 @@ import com.atlassian.jira.issue.customfields.persistence.CustomFieldValuePersist
 public class LocationTextCFType extends RenderableTextCFType {
     /**
      * @param customFieldValuePersister
-     * @param stringConverter
      * @param genericConfigManager
      */
     public LocationTextCFType(
             CustomFieldValuePersister customFieldValuePersister,
-            StringConverter stringConverter,
             GenericConfigManager genericConfigManager
     ) {
-        super(customFieldValuePersister, stringConverter, genericConfigManager);
+        super(customFieldValuePersister, genericConfigManager);
     }
 }

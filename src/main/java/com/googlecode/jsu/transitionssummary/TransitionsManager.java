@@ -1,23 +1,15 @@
 package com.googlecode.jsu.transitionssummary;
 
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
+import com.atlassian.core.util.map.EasyMap;
+import com.atlassian.jira.issue.Issue;
+import com.atlassian.jira.ofbiz.OfBizDelegator;
+import com.googlecode.jsu.util.FieldCollectionsUtils;
 import org.ofbiz.core.entity.GenericValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.atlassian.core.ofbiz.CoreFactory;
-import com.atlassian.core.util.map.EasyMap;
-import com.atlassian.jira.issue.Issue;
-import com.atlassian.jira.ofbiz.DefaultOfBizDelegator;
-import com.atlassian.jira.ofbiz.OfBizDelegator;
-import com.googlecode.jsu.util.FieldCollectionsUtils;
+import java.sql.Timestamp;
+import java.util.*;
 
 /**
  * @author Gustavo Martin
@@ -29,22 +21,24 @@ public class TransitionsManager {
     private static final Logger log = LoggerFactory.getLogger(TransitionsManager.class);
 
     private final FieldCollectionsUtils fieldCollectionsUtils;
+    private final OfBizDelegator ofBizDelegator;
 
     /**
      * @param fieldCollectionsUtils
      */
-    public TransitionsManager(FieldCollectionsUtils fieldCollectionsUtils) {
+    public TransitionsManager(FieldCollectionsUtils fieldCollectionsUtils, OfBizDelegator ofBizDelegator) {
         this.fieldCollectionsUtils = fieldCollectionsUtils;
+        this.ofBizDelegator = ofBizDelegator;
     }
 
     /**
-     * @param gvIssue the current issue.
+     * @param issue the current issue.
      * @return a List with the Transition Summaries.
      *
      * It obtains all Transition Summaries.
      */
     public List<TransitionSummary> getTransitionSummary(Issue issue){
-        Timestamp tsCreated = issue.getTimestamp("created");
+        Timestamp tsCreated = issue.getCreated();
         // Reads all status changes, associated with the execution of transitions.
         List<Transition> statusChanges = getStatusChanges(issue, tsCreated);
 
@@ -90,10 +84,9 @@ public class TransitionsManager {
      * It obtains all status changes data from the Change History.
      */
     private List<Transition> getStatusChanges(Issue issue, Timestamp tsCreated){
-        OfBizDelegator delegator = new DefaultOfBizDelegator(CoreFactory.getGenericDelegator());
         @SuppressWarnings("unchecked")
-        Map<String, Object> params = EasyMap.build("issue", issue.getLong("id"));
-        List<GenericValue> changeGroups = delegator.findByAnd("ChangeGroup", params);
+        Map<String, Object> params = EasyMap.build("issue", issue.getId());
+        List<GenericValue> changeGroups = ofBizDelegator.findByAnd("ChangeGroup", params);
 
         // Added by caisd_1998 at hotmail dot com
         Collections.sort(changeGroups,
@@ -116,7 +109,7 @@ public class TransitionsManager {
                     "fieldtype", "jira"
             );
 
-            List<GenericValue> changeItems = delegator.findByAnd("ChangeItem", paramsItem);
+            List<GenericValue> changeItems = ofBizDelegator.findByAnd("ChangeItem", paramsItem);
 
             for (GenericValue changeItem : changeItems) {
                 // And it creates the corresponding Transition.

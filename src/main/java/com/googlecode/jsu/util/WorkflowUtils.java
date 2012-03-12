@@ -23,7 +23,6 @@ import com.atlassian.jira.issue.fields.Field;
 import com.atlassian.jira.issue.fields.FieldManager;
 import com.atlassian.jira.issue.fields.config.FieldConfig;
 import com.atlassian.jira.issue.fields.layout.field.FieldLayoutItem;
-import com.atlassian.jira.issue.fields.layout.field.FieldLayoutStorageException;
 import com.atlassian.jira.issue.fields.screen.FieldScreen;
 import com.atlassian.jira.issue.link.IssueLinkManager;
 import com.atlassian.jira.issue.priority.Priority;
@@ -39,7 +38,6 @@ import com.atlassian.jira.project.version.VersionManager;
 import com.atlassian.jira.user.util.UserManager;
 import com.atlassian.jira.util.ObjectUtils;
 import com.atlassian.jira.workflow.WorkflowActionsBean;
-//import com.opensymphony.user.Entity;
 import com.opensymphony.workflow.loader.AbstractDescriptor;
 import com.opensymphony.workflow.loader.ActionDescriptor;
 import com.opensymphony.workflow.loader.FunctionDescriptor;
@@ -345,14 +343,7 @@ public class WorkflowUtils {
                 );
             }
 
-            try {
-                fieldLayoutItem = fieldCollectionsUtils.getFieldLayoutItem(issue, field);
-            } catch (FieldLayoutStorageException e) {
-                log.error("Unable to get field layout item", e);
-
-                throw new IllegalStateException(e);
-            }
-
+            fieldLayoutItem = fieldCollectionsUtils.getFieldLayoutItem(issue, field);
             Object newValue = value;
 
             if (value instanceof IssueConstant) {
@@ -369,7 +360,7 @@ public class WorkflowUtils {
                 }
             } else if (value instanceof Option && ! (cfType instanceof MultipleSettableCustomFieldType)) {
                 newValue = ((Option) newValue).getValue();
-            } else  if (value instanceof Timestamp && ! (cfType instanceof DateCFType || cfType instanceof DateTimeCFType)) {
+            } else  if (value instanceof Timestamp && ! fieldCollectionsUtils.getAllDateFields().contains(field)) {
                 String format = applicationProperties.getDefaultBackedString(APKeys.JIRA_DATE_TIME_PICKER_JAVA_FORMAT);
                 DateFormat dateFormat = new SimpleDateFormat(format);
                 newValue = dateFormat.format(value);
@@ -488,8 +479,8 @@ public class WorkflowUtils {
                 //					retVal = null;
                 //				}
             } else if (fieldId.equals(IssueFieldConstants.COMPONENTS)) {
-                Collection<GenericValue> components = convertValueToComponents(issue, value);
-                issue.setComponents(components);
+                Collection<ProjectComponent> components = convertValueToComponents(issue, value);
+                issue.setComponentObjects(components);
             } else if (fieldId.equals(IssueFieldConstants.FIX_FOR_VERSIONS)) {
                 Collection<Version> versions = convertValueToVersions(issue, value);
                 issue.setFixVersions(versions);
@@ -530,7 +521,7 @@ public class WorkflowUtils {
                 //				}
             } else if (fieldId.equals(IssueFieldConstants.PRIORITY)) {
                 if (value == null) {
-                    issue.setPriority(null);
+                    issue.setPriorityObject(null);
                 } else {
                     Priority priority = convertValueToPriority(value);
                     if (priority != null) {
@@ -539,7 +530,7 @@ public class WorkflowUtils {
                 }
             } else if (fieldId.equals(IssueFieldConstants.RESOLUTION)) {
                 if (value == null) {
-                    issue.setResolution(null);
+                    issue.setResolutionObject(null);
                 } else if (value instanceof GenericValue) {
                     issue.setResolution((GenericValue) value);
                 } else if (value instanceof Resolution) {
@@ -565,7 +556,7 @@ public class WorkflowUtils {
                 }
             } else if (fieldId.equals(IssueFieldConstants.STATUS)) {
                 if (value == null) {
-                    issue.setStatus(null);
+                    issue.setStatusObject(null);
                 } else if (value instanceof GenericValue) {
                     issue.setStatus((GenericValue) value);
                 } else if (value instanceof Status) {
@@ -574,7 +565,7 @@ public class WorkflowUtils {
                     Status status = ComponentManager.getInstance().getConstantsManager().getStatusByName(value.toString());
 
                     if (status != null) {
-                        issue.setStatusId(status.getId());
+                        issue.setStatusObject(status);
                     } else {
                         throw new IllegalArgumentException("Unable to find status with name \"" + value + "\"");
                     }
@@ -707,20 +698,20 @@ public class WorkflowUtils {
         throw new IllegalArgumentException("No option found with value '" + value + "' for custom field " + customField.getName() + " on issue " + issue.getKey() + ".");
     }
 
-    private Collection<GenericValue> convertValueToComponents(Issue issue, Object value) {
+    private Collection<ProjectComponent> convertValueToComponents(Issue issue, Object value) {
         if (value == null) {
-            return Collections.<GenericValue>emptySet();
-        } else if (value instanceof GenericValue) {
-            return Arrays.asList((GenericValue) value);
+            return Collections.<ProjectComponent>emptySet();
+        } else if (value instanceof ProjectComponent) {
+            return Arrays.asList((ProjectComponent) value);
         } else if (value instanceof Collection) {
-            return (Collection<GenericValue>) value;
+            return (Collection<ProjectComponent>) value;
         } else {
             ProjectComponent v = projectComponentManager.findByComponentName(
                     issue.getProjectObject().getId(), convertToString(value)
             );
 
             if (v != null) {
-                return Arrays.asList(v.getGenericValue());
+                return Arrays.asList(v);
             }
             throw new IllegalArgumentException("Wrong component value '" + value + "'.");
         }
@@ -757,6 +748,35 @@ public class WorkflowUtils {
         }
     }
 
+
+    //Custom fields still (JIRA 5.0) expect GenericValue. They cannot yet handle ProjectObj. - So this implementation is for later. For now we keep using convertValueToProject(...)
+    private Project convertValueToProjectObj(Object value) {
+        Project project;
+        if (value == null || value instanceof Project) {
+            return (Project) value;
+        } else if (value instanceof GenericValue) {
+            value = ((GenericValue) value).get("id");
+        }
+
+        if (value instanceof Long) {
+            project = projectManager.getProjectObj((Long) value);
+            if (project != null) return project;
+        } else {
+            String s = convertToString(value);
+            try {
+                Long id = Long.parseLong(s);
+                project = projectManager.getProjectObj(id);
+                if (project != null) return project;
+            } catch (NumberFormatException e) {
+                project = projectManager.getProjectObjByKey(s);
+                if (project == null) {
+                    project = projectManager.getProjectObjByName(s);
+                }
+                if (project != null) return project;
+            }
+        }
+        throw new IllegalArgumentException("Wrong project value '" + value + "'.");
+    }
 
     private GenericValue convertValueToProject(Object value) {
         GenericValue project;
