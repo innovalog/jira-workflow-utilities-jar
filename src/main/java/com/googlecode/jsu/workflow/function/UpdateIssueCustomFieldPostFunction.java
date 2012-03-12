@@ -3,6 +3,8 @@ package com.googlecode.jsu.workflow.function;
 import static com.googlecode.jsu.workflow.WorkflowUpdateIssueCustomFieldFunctionPluginFactory.TARGET_FIELD_NAME;
 import static com.googlecode.jsu.workflow.WorkflowUpdateIssueCustomFieldFunctionPluginFactory.TARGET_FIELD_VALUE;
 
+import java.sql.Timestamp;
+import java.util.Date;
 import java.util.Map;
 
 import com.atlassian.jira.issue.MutableIssue;
@@ -43,20 +45,23 @@ public class UpdateIssueCustomFieldPostFunction extends AbstractPreserveChangesP
         final Field field = workflowUtils.getFieldFromKey(fieldKey);
         final String fieldName = (field != null) ? field.getName() : "null";
 
-        String fieldValue = args.get(TARGET_FIELD_VALUE);
+        String configuredValue = args.get(TARGET_FIELD_VALUE);
+        Object newValue;
 
-        if ((fieldValue != null) && ("null".equals(fieldValue))) {
-            fieldValue = null;
-        }
-
-        if (fieldValue.equals("%%CURRENT_USER%%")) {
+        if ("null".equals(configuredValue)) {
+            newValue = null;
+        } else if ("%%CURRENT_USER%%".equals(configuredValue)) {
             try {
                 User currentUser = getCaller(transientVars, args);
-
-                fieldValue = currentUser.getName();
+                newValue = currentUser.getName();
             } catch (Exception e) {
+                newValue = null;
                 log.error("Unable to find caller for function", e);
             }
+        } else if ("%%CURRENT_DATETIME%%".equals(configuredValue)) {
+            newValue = new Timestamp(System.currentTimeMillis());
+        } else {
+            newValue = configuredValue;
         }
 
         MutableIssue issue = null;
@@ -69,11 +74,11 @@ public class UpdateIssueCustomFieldPostFunction extends AbstractPreserveChangesP
                         "Updating custom field '%s - %s' in issue [%s] with value [%s]",
                         fieldKey, fieldName,
                         issueToString(issue),
-                        fieldValue
+                        newValue
                 ));
             }
 
-            workflowUtils.setFieldValue(issue, fieldKey, fieldValue, holder);
+            workflowUtils.setFieldValue(issue, fieldKey, newValue, holder);
         } catch (Exception e) {
             final String message = String.format(
                     "Unable to update custom field '%s - %s' in issue [%s]",

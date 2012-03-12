@@ -41,6 +41,7 @@ import com.atlassian.jira.workflow.WorkflowActionsBean;
 import com.opensymphony.workflow.loader.AbstractDescriptor;
 import com.opensymphony.workflow.loader.ActionDescriptor;
 import com.opensymphony.workflow.loader.FunctionDescriptor;
+import org.apache.commons.httpclient.util.TimeoutController;
 import org.apache.commons.lang.StringUtils;
 import org.ofbiz.core.entity.GenericEntity;
 import org.ofbiz.core.entity.GenericEntityException;
@@ -50,6 +51,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.sql.Timestamp;
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -363,6 +365,10 @@ public class WorkflowUtils {
                 }
             } else if (value instanceof Option && ! (cfType instanceof MultipleSettableCustomFieldType)) {
                 newValue = ((Option) newValue).getValue();
+            } else  if (value instanceof Timestamp && ! (cfType instanceof DateCFType || cfType instanceof DateTimeCFType)) {
+                String format = applicationProperties.getDefaultBackedString(APKeys.JIRA_DATE_TIME_PICKER_JAVA_FORMAT);
+                DateFormat dateFormat = new SimpleDateFormat(format);
+                newValue = dateFormat.format(value);
             }
 
             if (cfType instanceof VersionCFType) {

@@ -71,7 +71,8 @@
         <div style="width: 60%;" class="infoBox centred">
             Please make sure that the value you set is valid for the project using this workflow. <br> 
             Otherwise, the transition may fail at execution time.<br>
-            You could use macro '%%CURRENT_USER%%' to insert function caller. 
+            You could use macro '%%CURRENT_USER%%' to insert the function caller. <br>
+            You could use macro '%%CURRENT_DATETIME%%' to insert the current date and time.
         </div>
     </td>
 </tr>
