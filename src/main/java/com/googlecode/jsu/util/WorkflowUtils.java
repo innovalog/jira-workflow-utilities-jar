@@ -418,7 +418,9 @@ public class WorkflowUtils {
                 if (cfType instanceof MultiUserCFType) {
                     newValue = convertValueToUser(newValue);
                 }
-                newValue = asArrayList(newValue.toString());
+                if (newValue != null) {
+                    newValue = asArrayList(newValue);
+                }
             }
 
             if (log.isDebugEnabled()) {
