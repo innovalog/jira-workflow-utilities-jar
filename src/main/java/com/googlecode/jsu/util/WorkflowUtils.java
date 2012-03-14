@@ -24,6 +24,7 @@ import com.atlassian.jira.issue.fields.config.FieldConfig;
 import com.atlassian.jira.issue.fields.layout.field.FieldLayoutItem;
 import com.atlassian.jira.issue.fields.layout.field.FieldLayoutStorageException;
 import com.atlassian.jira.issue.fields.screen.FieldScreen;
+import com.atlassian.jira.issue.label.LabelManager;
 import com.atlassian.jira.issue.link.IssueLinkManager;
 import com.atlassian.jira.issue.resolution.Resolution;
 import com.atlassian.jira.issue.security.IssueSecurityLevelManager;
@@ -55,10 +56,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
- * @author Gustavo Martin.
- *
  * This utils class exposes common methods to custom workflow objects.
- *
  */
 public class WorkflowUtils {
     public static final String SPLITTER = "@@";
@@ -78,6 +76,7 @@ public class WorkflowUtils {
     private final CrowdService crowdService;
     private final OptionsManager optionsManager;
     private final ProjectManager projectManager;
+    private final LabelManager labelManager;
 
     /**
      * @param fieldManager
@@ -88,6 +87,7 @@ public class WorkflowUtils {
      * @param applicationProperties
      * @param fieldCollectionsUtils
      * @param issueLinkManager
+     * @param labelManager
      */
     public WorkflowUtils(
             FieldManager fieldManager, IssueManager issueManager,
@@ -95,7 +95,7 @@ public class WorkflowUtils {
             IssueSecurityLevelManager issueSecurityLevelManager, ApplicationProperties applicationProperties,
             FieldCollectionsUtils fieldCollectionsUtils, IssueLinkManager issueLinkManager,
             UserManager userManager, CrowdService crowdService, OptionsManager optionsManager,
-            ProjectManager projectManager) {
+            ProjectManager projectManager, LabelManager labelManager) {
         this.fieldManager = fieldManager;
         this.issueManager = issueManager;
         this.projectComponentManager = projectComponentManager;
@@ -108,6 +108,7 @@ public class WorkflowUtils {
         this.crowdService = crowdService;
         this.optionsManager = optionsManager;
         this.projectManager = projectManager;
+        this.labelManager = labelManager;
     }
 
     /**
@@ -185,6 +186,8 @@ public class WorkflowUtils {
                             }
                         }
                     }
+                } else if (value instanceof Option) {
+                    retVal = ((Option)value).toString();
                 } else {
                     retVal = value; 
                 }
@@ -247,7 +250,8 @@ public class WorkflowUtils {
                 } else if (fieldId.equals(IssueFieldConstants.TIMETRACKING)) {
                     // Not implemented, yet.
                 } else if (fieldId.equals(IssueFieldConstants.ISSUE_LINKS)) {
-                    retVal = issueLinkManager.getIssueLinks(issue.getId());
+                    retVal = issueLinkManager.getOutwardLinks(issue.getId());
+                    ((Collection)retVal).addAll(issueLinkManager.getInwardLinks(issue.getId()));
                 } else if (fieldId.equals(IssueFieldConstants.WORKRATIO)) {
                     retVal = String.valueOf(WorkRatio.getWorkRatio(issue));
                 } else if (fieldId.equals(IssueFieldConstants.ISSUE_KEY)) {
@@ -270,6 +274,8 @@ public class WorkflowUtils {
                     retVal = issue.getSecurityLevel();
                 } else if (fieldId.equals(IssueFieldConstants.TIME_ESTIMATE)) {
                     retVal = issue.getEstimate();
+                } else if (fieldId.equals(IssueFieldConstants.TIME_ORIGINAL_ESTIMATE)) {
+                    retVal = issue.getOriginalEstimate();
                 } else if (fieldId.equals(IssueFieldConstants.TIME_SPENT)) {
                     retVal = issue.getTimeSpent();
                 } else if (fieldId.equals(IssueFieldConstants.ASSIGNEE)) {
@@ -351,10 +357,8 @@ public class WorkflowUtils {
 
             if (value instanceof IssueConstant) {
                 newValue = ((IssueConstant) value).getName();
-                /* TODO Where the heck was Entity used???
-            } else if (value instanceof Entity) {
-                newValue = ((Entity) value).getName();
-                */
+            } else if (value instanceof User) {
+                newValue = ((User) value).getName();
             } else if (value instanceof GenericValue) {
                 final GenericValue gv = (GenericValue) value;
 
@@ -380,10 +384,9 @@ public class WorkflowUtils {
                         newValue = option;
                     }
                 } else if (cfType instanceof LabelsCFType && ((String) newValue).contains(" ")) {
-                    throw new UnsupportedOperationException("Setting multiple labels is not implemented");
-                    //JSUTIL-28
-                    //Would need quite different implementation with
-                    //LabelManager.setLabels(...)
+                    String[] labels = ((String) newValue).split(" +");
+                    CustomFieldParams fieldParams = new CustomFieldParamsImpl(customField, labels);
+                    newValue = cfType.getValueFromCustomFieldParams(fieldParams);
                 } else {
                     //convert from string to Object
                     CustomFieldParams fieldParams = new CustomFieldParamsImpl(customField, newValue);
@@ -391,7 +394,8 @@ public class WorkflowUtils {
                 }
             } else if (newValue instanceof Collection<?>) {
                 if ((customField.getCustomFieldType() instanceof AbstractMultiCFType) ||
-                        (customField.getCustomFieldType() instanceof MultipleCustomFieldType)) {
+                        (customField.getCustomFieldType() instanceof MultipleCustomFieldType)
+                        || (customField.getCustomFieldType() instanceof LabelsCFType)) {
                     // format already correct
                 } else {
                     //convert from string to Object
@@ -402,6 +406,8 @@ public class WorkflowUtils {
 
                     newValue = cfType.getValueFromCustomFieldParams(fieldParams);
                 }
+            } else if (newValue instanceof Option && !(cfType instanceof MultipleSettableCustomFieldType)) {
+                newValue = ((Option) newValue).getValue();
             } else if (cfType instanceof UserCFType) {
                 newValue = convertValueToUser(newValue);
             } else if (cfType instanceof AbstractMultiCFType) {
@@ -439,13 +445,13 @@ public class WorkflowUtils {
             }
 
             // Not new
-            if (issue.getKey() != null) {
+/*            if (issue.getKey() != null) {
                 // Remove duplicated issue update
                 if (issue.getModifiedFields().containsKey(field.getId())) {
                     issue.getModifiedFields().remove(field.getId());
                 }
             }
-        } else { //----- System Fields -----
+*/        } else { //----- System Fields -----
             final String fieldId = field.getId();
 
             // Special treatment of fields.
@@ -575,12 +581,17 @@ public class WorkflowUtils {
                     Collection<GenericValue> levels;
 
                     try {
+                        Long l = Long.decode(value.toString());
+                        issue.setSecurityLevelId(l);
+                    } catch (NumberFormatException ignore) {
+                        //try looking for the security level name instead
+                        try {
                         levels = issueSecurityLevelManager.getSecurityLevelsByName(value.toString());
                     } catch (GenericEntityException e) {
                         throw new IllegalArgumentException("Unable to find security level \"" + value + "\"");
                     }
 
-                    if (levels == null) {
+                        if (levels == null || levels.size() == 0) {
                         throw new IllegalArgumentException("Unable to find security level \"" + value + "\"");
                     }
 
@@ -589,6 +600,7 @@ public class WorkflowUtils {
                     }
 
                     issue.setSecurityLevel(levels.iterator().next());
+                }
                 }
             } else if (fieldId.equals(IssueFieldConstants.ASSIGNEE)) {
                 User user = convertValueToUser(value);
@@ -631,6 +643,24 @@ public class WorkflowUtils {
                     issue.setDescription((String) value);
                 } else {
                     issue.setDescription(value.toString());
+                }
+            } else if (fieldId.equals(IssueFieldConstants.TIME_SPENT)) {
+                if ((value == null) || (value instanceof Long)) {
+                    issue.setTimeSpent((Long) value);
+                } else {
+                    throw new UnsupportedOperationException("Wrong value type for setting 'Time Spent' (Long expected)");
+                }
+            } else if (fieldId.equals(IssueFieldConstants.TIME_ESTIMATE)) {
+                if ((value == null) || (value instanceof Long)) {
+                    issue.setEstimate((Long) value);
+                } else {
+                    throw new UnsupportedOperationException("Wrong value type for setting 'Time Estimate' (Long expected)");
+                }
+            } else if (fieldId.equals(IssueFieldConstants.TIME_ORIGINAL_ESTIMATE)) {
+                if ((value == null) || (value instanceof Long)) {
+                    issue.setOriginalEstimate((Long) value);
+                } else {
+                    throw new UnsupportedOperationException("Wrong value type for setting 'Original Estimate' (Long expected)");
                 }
             } else if (fieldId.equals(IssueFieldConstants.ENVIRONMENT)) {
                 if ((value == null) || (value instanceof String)) {
@@ -837,7 +867,10 @@ public class WorkflowUtils {
 
         for (String s : groups) {
             Group group = crowdService.getGroup(s);
-            groupList.add(group);
+
+            //JMWE-30
+            if (group != null)
+              groupList.add(group);
         }
 
         return groupList;
