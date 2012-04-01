@@ -29,6 +29,7 @@ import com.atlassian.jira.issue.link.IssueLinkManager;
 import com.atlassian.jira.issue.resolution.Resolution;
 import com.atlassian.jira.issue.security.IssueSecurityLevelManager;
 import com.atlassian.jira.issue.status.Status;
+import com.atlassian.jira.issue.util.AggregateTimeTrackingCalculatorFactory;
 import com.atlassian.jira.issue.util.IssueChangeHolder;
 import com.atlassian.jira.issue.worklog.WorkRatio;
 import com.atlassian.jira.project.Project;
@@ -77,6 +78,7 @@ public class WorkflowUtils {
     private final OptionsManager optionsManager;
     private final ProjectManager projectManager;
     private final LabelManager labelManager;
+    private final AggregateTimeTrackingCalculatorFactory aggregateTimeTrackingCalculatorFactory;
 
     /**
      * @param fieldManager
@@ -88,14 +90,15 @@ public class WorkflowUtils {
      * @param fieldCollectionsUtils
      * @param issueLinkManager
      * @param labelManager
+     * @param aggregateTimeTrackingCalculatorFactory
      */
     public WorkflowUtils(
-            FieldManager fieldManager, IssueManager issueManager,
-            ProjectComponentManager projectComponentManager, VersionManager versionManager,
-            IssueSecurityLevelManager issueSecurityLevelManager, ApplicationProperties applicationProperties,
-            FieldCollectionsUtils fieldCollectionsUtils, IssueLinkManager issueLinkManager,
-            UserManager userManager, CrowdService crowdService, OptionsManager optionsManager,
-            ProjectManager projectManager, LabelManager labelManager) {
+      FieldManager fieldManager, IssueManager issueManager,
+      ProjectComponentManager projectComponentManager, VersionManager versionManager,
+      IssueSecurityLevelManager issueSecurityLevelManager, ApplicationProperties applicationProperties,
+      FieldCollectionsUtils fieldCollectionsUtils, IssueLinkManager issueLinkManager,
+      UserManager userManager, CrowdService crowdService, OptionsManager optionsManager,
+      ProjectManager projectManager, LabelManager labelManager, AggregateTimeTrackingCalculatorFactory aggregateTimeTrackingCalculatorFactory) {
         this.fieldManager = fieldManager;
         this.issueManager = issueManager;
         this.projectComponentManager = projectComponentManager;
@@ -109,6 +112,7 @@ public class WorkflowUtils {
         this.optionsManager = optionsManager;
         this.projectManager = projectManager;
         this.labelManager = labelManager;
+        this.aggregateTimeTrackingCalculatorFactory = aggregateTimeTrackingCalculatorFactory;
     }
 
     /**
@@ -278,6 +282,12 @@ public class WorkflowUtils {
                     retVal = issue.getOriginalEstimate();
                 } else if (fieldId.equals(IssueFieldConstants.TIME_SPENT)) {
                     retVal = issue.getTimeSpent();
+                } else if (fieldId.equals(IssueFieldConstants.AGGREGATE_TIME_SPENT)) {
+                    retVal = aggregateTimeTrackingCalculatorFactory.getCalculator(issue).getAggregates(issue).getTimeSpent();
+                } else if (fieldId.equals(IssueFieldConstants.AGGREGATE_TIME_ESTIMATE)) {
+                    retVal = aggregateTimeTrackingCalculatorFactory.getCalculator(issue).getAggregates(issue).getRemainingEstimate();
+                } else if (fieldId.equals(IssueFieldConstants.AGGREGATE_TIME_ORIGINAL_ESTIMATE)) {
+                    retVal = aggregateTimeTrackingCalculatorFactory.getCalculator(issue).getAggregates(issue).getOriginalEstimate();
                 } else if (fieldId.equals(IssueFieldConstants.ASSIGNEE)) {
                     retVal = issue.getAssigneeUser();
                 } else if (fieldId.equals(IssueFieldConstants.REPORTER)) {
