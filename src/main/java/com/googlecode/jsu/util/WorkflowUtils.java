@@ -6,6 +6,7 @@ import com.atlassian.crowd.embedded.api.User;
 import com.atlassian.jira.ComponentManager;
 import com.atlassian.jira.bc.project.component.ProjectComponent;
 import com.atlassian.jira.bc.project.component.ProjectComponentManager;
+import com.atlassian.jira.config.ConstantsManager;
 import com.atlassian.jira.config.properties.APKeys;
 import com.atlassian.jira.config.properties.ApplicationProperties;
 import com.atlassian.jira.issue.*;
@@ -24,8 +25,10 @@ import com.atlassian.jira.issue.fields.config.FieldConfig;
 import com.atlassian.jira.issue.fields.layout.field.FieldLayoutItem;
 import com.atlassian.jira.issue.fields.layout.field.FieldLayoutStorageException;
 import com.atlassian.jira.issue.fields.screen.FieldScreen;
+import com.atlassian.jira.issue.label.Label;
 import com.atlassian.jira.issue.label.LabelManager;
 import com.atlassian.jira.issue.link.IssueLinkManager;
+import com.atlassian.jira.issue.priority.Priority;
 import com.atlassian.jira.issue.resolution.Resolution;
 import com.atlassian.jira.issue.security.IssueSecurityLevelManager;
 import com.atlassian.jira.issue.status.Status;
@@ -79,6 +82,7 @@ public class WorkflowUtils {
     private final ProjectManager projectManager;
     private final LabelManager labelManager;
     private final AggregateTimeTrackingCalculatorFactory aggregateTimeTrackingCalculatorFactory;
+    private final ConstantsManager constantsManager;
 
     /**
      * @param fieldManager
@@ -91,6 +95,7 @@ public class WorkflowUtils {
      * @param issueLinkManager
      * @param labelManager
      * @param aggregateTimeTrackingCalculatorFactory
+     * @param constantsManager
      */
     public WorkflowUtils(
       FieldManager fieldManager, IssueManager issueManager,
@@ -98,21 +103,22 @@ public class WorkflowUtils {
       IssueSecurityLevelManager issueSecurityLevelManager, ApplicationProperties applicationProperties,
       FieldCollectionsUtils fieldCollectionsUtils, IssueLinkManager issueLinkManager,
       UserManager userManager, CrowdService crowdService, OptionsManager optionsManager,
-      ProjectManager projectManager, LabelManager labelManager, AggregateTimeTrackingCalculatorFactory aggregateTimeTrackingCalculatorFactory) {
-        this.fieldManager = fieldManager;
-        this.issueManager = issueManager;
-        this.projectComponentManager = projectComponentManager;
-        this.versionManager = versionManager;
-        this.issueSecurityLevelManager = issueSecurityLevelManager;
-        this.applicationProperties = applicationProperties;
-        this.fieldCollectionsUtils = fieldCollectionsUtils;
-        this.issueLinkManager = issueLinkManager;
-        this.userManager = userManager;
-        this.crowdService = crowdService;
-        this.optionsManager = optionsManager;
-        this.projectManager = projectManager;
-        this.labelManager = labelManager;
-        this.aggregateTimeTrackingCalculatorFactory = aggregateTimeTrackingCalculatorFactory;
+      ProjectManager projectManager, LabelManager labelManager, AggregateTimeTrackingCalculatorFactory aggregateTimeTrackingCalculatorFactory, ConstantsManager constantsManager) {
+      this.fieldManager = fieldManager;
+      this.issueManager = issueManager;
+      this.projectComponentManager = projectComponentManager;
+      this.versionManager = versionManager;
+      this.issueSecurityLevelManager = issueSecurityLevelManager;
+      this.applicationProperties = applicationProperties;
+      this.fieldCollectionsUtils = fieldCollectionsUtils;
+      this.issueLinkManager = issueLinkManager;
+      this.userManager = userManager;
+      this.crowdService = crowdService;
+      this.optionsManager = optionsManager;
+      this.projectManager = projectManager;
+      this.labelManager = labelManager;
+      this.aggregateTimeTrackingCalculatorFactory = aggregateTimeTrackingCalculatorFactory;
+      this.constantsManager = constantsManager;
     }
 
     /**
@@ -535,8 +541,18 @@ public class WorkflowUtils {
             } else if (fieldId.equals(IssueFieldConstants.PRIORITY)) {
                 if (value == null) {
                     issue.setPriority(null);
+                } else if (value instanceof GenericValue) {
+                    issue.setStatus((GenericValue) value);
+                } else if (value instanceof Priority) {
+                    issue.setPriorityId(((Priority) value).getId());
                 } else {
-                    throw new UnsupportedOperationException("Not implemented");
+                    Priority priority = constantsManager.getPriorityObject(value.toString());
+
+                    if (priority != null) {
+                        issue.setPriorityId(priority.getId());
+                    } else {
+                        throw new IllegalArgumentException("Unable to find priority with name \"" + value + "\"");
+                    }
                 }
             } else if (fieldId.equals(IssueFieldConstants.RESOLUTION)) {
                 if (value == null) {
@@ -653,6 +669,12 @@ public class WorkflowUtils {
                     issue.setDescription((String) value);
                 } else {
                     issue.setDescription(value.toString());
+                }
+            } else if (fieldId.equals(IssueFieldConstants.LABELS)) {
+                if ((value == null) || (value instanceof Set)) {
+                    issue.setLabels((Set<Label>) value);
+                } else {
+                    throw new UnsupportedOperationException("Wrong value type for setting 'Labels'");
                 }
             } else if (fieldId.equals(IssueFieldConstants.TIME_SPENT)) {
                 if ((value == null) || (value instanceof Long)) {
