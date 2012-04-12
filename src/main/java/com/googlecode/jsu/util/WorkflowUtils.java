@@ -38,17 +38,16 @@ import com.atlassian.jira.project.version.VersionManager;
 import com.atlassian.jira.user.util.UserManager;
 import com.atlassian.jira.util.ObjectUtils;
 import com.atlassian.jira.workflow.WorkflowActionsBean;
+import com.googlecode.jsu.helpers.checkers.ConverterString;
 import com.opensymphony.workflow.loader.AbstractDescriptor;
 import com.opensymphony.workflow.loader.ActionDescriptor;
 import com.opensymphony.workflow.loader.FunctionDescriptor;
 import org.apache.commons.lang.StringUtils;
-import org.ofbiz.core.entity.GenericEntity;
 import org.ofbiz.core.entity.GenericEntityException;
 import org.ofbiz.core.entity.GenericValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Method;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -650,33 +649,9 @@ public class WorkflowUtils {
         }
     }
 
+    private static final ConverterString CONVERTER_STRING = new ConverterString();
     public String convertToString(Object value) {
-        if (value == null || value instanceof String) {
-            return (String) value;
-        } else if (value instanceof Collection) {
-            return convertToString(firstValue((Collection) value));
-        } else if (value instanceof Option) {
-            return ((Option) value).getValue();
-        } else if (value instanceof GenericEntity) {
-            String s = ((GenericEntity) value).getString("name");
-            if (StringUtils.isEmpty(s)) {
-                s = ((GenericEntity) value).getString("id");
-                if (StringUtils.isEmpty(s)) {
-                    s = value.toString();
-                }
-            }
-            return s;
-        } else {
-            try {
-                Method getName = value.getClass().getMethod("getName");
-                return getName.invoke(value).toString();
-            } catch (Exception e) { /* try getId() ... */ }
-            try {
-                Method getId = value.getClass().getMethod("getId");
-                return getId.invoke(value).toString();
-            } catch (Exception e) { /* use toString() ... */ }
-            return value.toString();
-        }
+        return CONVERTER_STRING.convert(value);
     }
 
     private Option convertStringToOption(Issue issue, CustomField customField, String value) {
