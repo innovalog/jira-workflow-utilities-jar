@@ -23,13 +23,13 @@ import com.atlassian.jira.issue.fields.Field;
 import com.atlassian.jira.issue.fields.FieldManager;
 import com.atlassian.jira.issue.fields.config.FieldConfig;
 import com.atlassian.jira.issue.fields.layout.field.FieldLayoutItem;
-import com.atlassian.jira.issue.fields.layout.field.FieldLayoutStorageException;
 import com.atlassian.jira.issue.fields.screen.FieldScreen;
 import com.atlassian.jira.issue.label.Label;
 import com.atlassian.jira.issue.label.LabelManager;
 import com.atlassian.jira.issue.link.IssueLinkManager;
 import com.atlassian.jira.issue.priority.Priority;
 import com.atlassian.jira.issue.resolution.Resolution;
+import com.atlassian.jira.issue.security.IssueSecurityLevel;
 import com.atlassian.jira.issue.security.IssueSecurityLevelManager;
 import com.atlassian.jira.issue.status.Status;
 import com.atlassian.jira.issue.util.AggregateTimeTrackingCalculatorFactory;
@@ -42,22 +42,23 @@ import com.atlassian.jira.project.version.VersionManager;
 import com.atlassian.jira.user.util.UserManager;
 import com.atlassian.jira.util.ObjectUtils;
 import com.atlassian.jira.workflow.WorkflowActionsBean;
-//import com.opensymphony.user.Entity;
+import com.googlecode.jsu.helpers.checkers.ConverterString;
 import com.opensymphony.workflow.loader.AbstractDescriptor;
 import com.opensymphony.workflow.loader.ActionDescriptor;
 import com.opensymphony.workflow.loader.FunctionDescriptor;
 import org.apache.commons.lang.StringUtils;
-import org.ofbiz.core.entity.GenericEntity;
 import org.ofbiz.core.entity.GenericEntityException;
 import org.ofbiz.core.entity.GenericValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Method;
 import java.sql.Timestamp;
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+
+//import com.opensymphony.user.Entity;
 
 /**
  * This utils class exposes common methods to custom workflow objects.
@@ -361,20 +362,11 @@ public class WorkflowUtils {
                 );
             }
 
-            try {
-                fieldLayoutItem = fieldCollectionsUtils.getFieldLayoutItem(issue, field);
-            } catch (FieldLayoutStorageException e) {
-                log.error("Unable to get field layout item", e);
-
-                throw new IllegalStateException(e);
-            }
-
+            fieldLayoutItem = fieldCollectionsUtils.getFieldLayoutItem(issue, field);
             Object newValue = value;
 
             if (value instanceof IssueConstant) {
                 newValue = ((IssueConstant) value).getName();
-            } else if (value instanceof User) {
-                newValue = ((User) value).getName();
             } else if (value instanceof GenericValue) {
                 final GenericValue gv = (GenericValue) value;
 
@@ -383,6 +375,10 @@ public class WorkflowUtils {
                 }
             } else if (value instanceof Option && ! (cfType instanceof MultipleSettableCustomFieldType)) {
                 newValue = ((Option) newValue).getValue();
+            } else  if (value instanceof Timestamp && ! fieldCollectionsUtils.getAllDateFields().contains(field)) {
+                String format = applicationProperties.getDefaultBackedString(APKeys.JIRA_DATE_TIME_PICKER_JAVA_FORMAT);
+                DateFormat dateFormat = new SimpleDateFormat(format);
+                newValue = dateFormat.format(value);
             }
 
             if (cfType instanceof VersionCFType) {
@@ -424,13 +420,17 @@ public class WorkflowUtils {
                 }
             } else if (newValue instanceof Option && !(cfType instanceof MultipleSettableCustomFieldType)) {
                 newValue = ((Option) newValue).getValue();
+            } else if (newValue instanceof User && !(cfType instanceof UserCFType)) {
+                newValue = ((User)newValue).getName();
             } else if (cfType instanceof UserCFType) {
                 newValue = convertValueToUser(newValue);
             } else if (cfType instanceof AbstractMultiCFType) {
                 if (cfType instanceof MultiUserCFType) {
                     newValue = convertValueToUser(newValue);
                 }
-                newValue = asArrayList(newValue.toString());
+                if (newValue != null) {
+                    newValue = asArrayList(newValue);
+                }
             }
 
             if (log.isDebugEnabled()) {
@@ -552,7 +552,7 @@ public class WorkflowUtils {
                         issue.setPriorityId(priority.getId());
                     } else {
                         throw new IllegalArgumentException("Unable to find priority with name \"" + value + "\"");
-                    }
+                }
                 }
             } else if (fieldId.equals(IssueFieldConstants.RESOLUTION)) {
                 if (value == null) {
@@ -706,33 +706,9 @@ public class WorkflowUtils {
         }
     }
 
+    private static final ConverterString CONVERTER_STRING = new ConverterString();
     public String convertToString(Object value) {
-        if (value == null || value instanceof String) {
-            return (String) value;
-        } else if (value instanceof Collection) {
-            return convertToString(firstValue((Collection) value));
-        } else if (value instanceof Option) {
-            return ((Option) value).getValue();
-        } else if (value instanceof GenericEntity) {
-            String s = ((GenericEntity) value).getString("name");
-            if (StringUtils.isEmpty(s)) {
-                s = ((GenericEntity) value).getString("id");
-                if (StringUtils.isEmpty(s)) {
-                    s = value.toString();
-                }
-            }
-            return s;
-        } else {
-            try {
-                Method getName = value.getClass().getMethod("getName");
-                return getName.invoke(value).toString();
-            } catch (Exception e) { /* try getId() ... */ }
-            try {
-                Method getId = value.getClass().getMethod("getId");
-                return getId.invoke(value).toString();
-            } catch (Exception e) { /* use toString() ... */ }
-            return value.toString();
-        }
+        return CONVERTER_STRING.convert(value);
     }
 
     private Option convertStringToOption(Issue issue, CustomField customField, String value) {
@@ -805,25 +781,52 @@ public class WorkflowUtils {
     }
 
 
-    private GenericValue convertValueToProject(Object value) {
-        GenericValue project;
-        if (value == null || value instanceof GenericValue) {
-            return (GenericValue) value;
-        } else if (value instanceof Project) {
-            return ((Project) value).getGenericValue();
-        } else if (value instanceof Long) {
-            project = projectManager.getProject((Long) value);
+    //Custom fields still (JIRA 5.0) expect GenericValue. They cannot yet handle ProjectObj. - So this implementation is for later. For now we keep using convertValueToProject(...)
+    private Project convertValueToProjectObj(Object value) {
+        Project project;
+        if (value == null || value instanceof Project) {
+            return (Project) value;
+        } else if (value instanceof GenericValue) {
+            value = ((GenericValue) value).get("id");
+        }
+
+        if (value instanceof Long) {
+            project = projectManager.getProjectObj((Long) value);
             if (project != null) return project;
         } else {
             String s = convertToString(value);
             try {
                 Long id = Long.parseLong(s);
-                project = projectManager.getProject(id);
+                project = projectManager.getProjectObj(id);
                 if (project != null) return project;
             } catch (NumberFormatException e) {
-                project = projectManager.getProjectByKey(s);
+                project = projectManager.getProjectObjByKey(s);
                 if (project == null) {
-                    project = projectManager.getProjectByName(s);
+                    project = projectManager.getProjectObjByName(s);
+                }
+                if (project != null) return project;
+            }
+        }
+        throw new IllegalArgumentException("Wrong project value '" + value + "'.");
+    }
+
+    private Project convertValueToProject(Object value) {
+        Project project;
+        if (value instanceof Project) {
+            return (Project)value;
+        } else if (value instanceof Long) {
+            project = projectManager.getProjectObj((Long) value);
+            if (project != null) return project;
+        } else {
+            String s = convertToString(value);
+            try {
+                Long id = Long.parseLong(s);
+                project = projectManager.getProjectObj(id);
+                if (project != null) return project;
+            } catch (NumberFormatException e) {
+                project = projectManager.getProjectObjByKey(s);
+                if (project == null) {
+                    project = projectManager.getProjectObjByName(s);
                 }
                 if (project != null) return project;
             }
