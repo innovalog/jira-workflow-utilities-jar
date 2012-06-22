@@ -886,7 +886,7 @@ public class WorkflowUtils {
             map.put(CascadingSelectCFType.PARENT_KEY, upperOption);
             map.put(CascadingSelectCFType.CHILD_KEY, option);
         } else {
-            map.put(CascadingSelectCFType.PARENT_KEY, upperOption);
+        	map.put(CascadingSelectCFType.CHILD_KEY, option);
         }
         return map;
     }
