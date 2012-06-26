@@ -406,7 +406,7 @@ public class WorkflowUtils {
                 newValue = convertValueToVersions(issue, newValue);
             } else if (cfType instanceof ProjectCFType) {
                 newValue = convertValueToProject(newValue);
-            } else if (newValue instanceof String) {
+            } else if (newValue instanceof String || newValue == null) {
                 if (cfType instanceof MultipleSettableCustomFieldType) {
                     Option option = convertStringToOption(issue, customField, (String) newValue);
                     if (cfType instanceof MultiSelectCFType) {
@@ -736,23 +736,32 @@ public class WorkflowUtils {
         FieldConfig relevantConfig = customField.getRelevantConfig(issue);
         List<Option> options = optionsManager.findByOptionValue(value);
         Object upperCustomFieldValues = issue.getParentObject().getCustomFieldValue(customField);
-        if (options.size() == 0) {
-            try {
-                Long optionId = Long.parseLong(value);
-                Option option = optionsManager.findByOptionId(optionId);
-                options = Collections.singletonList(option);
-            } catch (NumberFormatException e) { /* IllegalArgumentException will be thrown at end of this method. */ }
-        }
-        for (Option option : options) {
-            FieldConfig fieldConfig = option.getRelatedCustomField();
-            String upperOptionValue = (option.getParentOption() != null ? option.getParentOption().getValue() : "");
-            if (upperCustomFieldValues != null && upperCustomFieldValues instanceof Map) {
-                Option upperOption = ((Map<String,Option>) upperCustomFieldValues).get(CascadingSelectCFType.PARENT_KEY);
-                if (upperOption != null && upperOptionValue.length() > 0 && upperOptionValue.equals(upperOption.getValue())) {
+        if (options != null) {
+            if (options.size() == 0) {
+                try {
+                    Long optionId = Long.parseLong(value);
+                    Option option = optionsManager.findByOptionId(optionId);
+                    options = Collections.singletonList(option);
+                } catch (NumberFormatException e) { /* IllegalArgumentException will be thrown at end of this method. */ }
+            }
+            for (Option option : options) {
+                FieldConfig fieldConfig = option.getRelatedCustomField();
+                String upperOptionValue = (option.getParentOption() != null ? option.getParentOption().getValue() : "");
+                if (upperCustomFieldValues != null && upperCustomFieldValues instanceof Map) {
+                    Option upperOption = ((Map<String,Option>) upperCustomFieldValues).get(CascadingSelectCFType.PARENT_KEY);
+                    if (upperOption != null && upperOptionValue.length() > 0 && upperOptionValue.equals(upperOption.getValue())) {
+                        return option;
+                    }
+                } else if (relevantConfig != null && relevantConfig.equals(fieldConfig)) {
                     return option;
                 }
-            } else if (relevantConfig != null && relevantConfig.equals(fieldConfig)) {
-                return option;
+            }
+        } else {
+            if (upperCustomFieldValues != null && upperCustomFieldValues instanceof Map) {
+                Option upperOption = ((Map<String,Option>) upperCustomFieldValues).get(CascadingSelectCFType.PARENT_KEY);
+                if (upperOption != null) {
+                    return upperOption;
+                }
             }
         }
         throw new IllegalArgumentException("No option found with value '" + value + "' for custom field " + customField.getName() + " on issue " + issue.getKey() + ".");
@@ -886,7 +895,7 @@ public class WorkflowUtils {
             map.put(CascadingSelectCFType.PARENT_KEY, upperOption);
             map.put(CascadingSelectCFType.CHILD_KEY, option);
         } else {
-        	map.put(CascadingSelectCFType.CHILD_KEY, option);
+            map.put(CascadingSelectCFType.PARENT_KEY, option);
         }
         return map;
     }
