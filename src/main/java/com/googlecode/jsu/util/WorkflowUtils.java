@@ -1,5 +1,25 @@
 package com.googlecode.jsu.util;
 
+import java.sql.Timestamp;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.commons.lang.StringUtils;
+import org.ofbiz.core.entity.GenericEntityException;
+import org.ofbiz.core.entity.GenericValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.atlassian.crowd.embedded.api.CrowdService;
 import com.atlassian.crowd.embedded.api.Group;
 import com.atlassian.crowd.embedded.api.User;
@@ -9,11 +29,24 @@ import com.atlassian.jira.bc.project.component.ProjectComponentManager;
 import com.atlassian.jira.config.ConstantsManager;
 import com.atlassian.jira.config.properties.APKeys;
 import com.atlassian.jira.config.properties.ApplicationProperties;
-import com.atlassian.jira.issue.*;
+import com.atlassian.jira.issue.Issue;
+import com.atlassian.jira.issue.IssueConstant;
+import com.atlassian.jira.issue.IssueFieldConstants;
+import com.atlassian.jira.issue.IssueManager;
+import com.atlassian.jira.issue.IssueRelationConstants;
+import com.atlassian.jira.issue.ModifiedValue;
+import com.atlassian.jira.issue.MutableIssue;
 import com.atlassian.jira.issue.customfields.CustomFieldType;
 import com.atlassian.jira.issue.customfields.MultipleCustomFieldType;
 import com.atlassian.jira.issue.customfields.MultipleSettableCustomFieldType;
-import com.atlassian.jira.issue.customfields.impl.*;
+import com.atlassian.jira.issue.customfields.impl.AbstractMultiCFType;
+import com.atlassian.jira.issue.customfields.impl.CascadingSelectCFType;
+import com.atlassian.jira.issue.customfields.impl.LabelsCFType;
+import com.atlassian.jira.issue.customfields.impl.MultiSelectCFType;
+import com.atlassian.jira.issue.customfields.impl.MultiUserCFType;
+import com.atlassian.jira.issue.customfields.impl.ProjectCFType;
+import com.atlassian.jira.issue.customfields.impl.UserCFType;
+import com.atlassian.jira.issue.customfields.impl.VersionCFType;
 import com.atlassian.jira.issue.customfields.manager.OptionsManager;
 import com.atlassian.jira.issue.customfields.option.Option;
 import com.atlassian.jira.issue.customfields.view.CustomFieldParams;
@@ -29,7 +62,6 @@ import com.atlassian.jira.issue.label.LabelManager;
 import com.atlassian.jira.issue.link.IssueLinkManager;
 import com.atlassian.jira.issue.priority.Priority;
 import com.atlassian.jira.issue.resolution.Resolution;
-import com.atlassian.jira.issue.security.IssueSecurityLevel;
 import com.atlassian.jira.issue.security.IssueSecurityLevelManager;
 import com.atlassian.jira.issue.status.Status;
 import com.atlassian.jira.issue.util.AggregateTimeTrackingCalculatorFactory;
@@ -46,17 +78,6 @@ import com.googlecode.jsu.helpers.checkers.ConverterString;
 import com.opensymphony.workflow.loader.AbstractDescriptor;
 import com.opensymphony.workflow.loader.ActionDescriptor;
 import com.opensymphony.workflow.loader.FunctionDescriptor;
-import org.apache.commons.lang.StringUtils;
-import org.ofbiz.core.entity.GenericEntityException;
-import org.ofbiz.core.entity.GenericValue;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.sql.Timestamp;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.*;
 
 //import com.opensymphony.user.Entity;
 
@@ -385,13 +406,13 @@ public class WorkflowUtils {
                 newValue = convertValueToVersions(issue, newValue);
             } else if (cfType instanceof ProjectCFType) {
                 newValue = convertValueToProject(newValue);
-            } else if (newValue instanceof String) {
+            } else if (newValue instanceof String || newValue == null) {
                 if (cfType instanceof MultipleSettableCustomFieldType) {
                     Option option = convertStringToOption(issue, customField, (String) newValue);
                     if (cfType instanceof MultiSelectCFType) {
                         newValue = asArrayList(option);
                     } else if (cfType instanceof CascadingSelectCFType) {
-                        newValue = convertOptionToCustomFieldParamsImpl(customField, option);
+                        newValue = convertValueToMap(customField, option);
                     } else {
                         newValue = option;
                     }
@@ -714,17 +735,33 @@ public class WorkflowUtils {
     private Option convertStringToOption(Issue issue, CustomField customField, String value) {
         FieldConfig relevantConfig = customField.getRelevantConfig(issue);
         List<Option> options = optionsManager.findByOptionValue(value);
-        if (options.size() == 0) {
-            try {
-                Long optionId = Long.parseLong(value);
-                Option option = optionsManager.findByOptionId(optionId);
-                options = Collections.singletonList(option);
-            } catch (NumberFormatException e) { /* IllegalArgumentException will be thrown at end of this method. */ }
-        }
-        for (Option option : options) {
-            FieldConfig fieldConfig = option.getRelatedCustomField();
-            if (relevantConfig != null && relevantConfig.equals(fieldConfig)) {
-                return option;
+        Object upperCustomFieldValues = issue.getParentObject().getCustomFieldValue(customField);
+        if (options != null) {
+            if (options.size() == 0) {
+                try {
+                    Long optionId = Long.parseLong(value);
+                    Option option = optionsManager.findByOptionId(optionId);
+                    options = Collections.singletonList(option);
+                } catch (NumberFormatException e) { /* IllegalArgumentException will be thrown at end of this method. */ }
+            }
+            for (Option option : options) {
+                FieldConfig fieldConfig = option.getRelatedCustomField();
+                String upperOptionValue = (option.getParentOption() != null ? option.getParentOption().getValue() : "");
+                if (upperCustomFieldValues != null && upperCustomFieldValues instanceof Map) {
+                    Option upperOption = ((Map<String,Option>) upperCustomFieldValues).get(CascadingSelectCFType.PARENT_KEY);
+                    if (upperOption != null && upperOptionValue.length() > 0 && upperOptionValue.equals(upperOption.getValue())) {
+                        return option;
+                    }
+                } else if (relevantConfig != null && relevantConfig.equals(fieldConfig)) {
+                    return option;
+                }
+            }
+        } else {
+            if (upperCustomFieldValues != null && upperCustomFieldValues instanceof Map) {
+                Option upperOption = ((Map<String,Option>) upperCustomFieldValues).get(CascadingSelectCFType.PARENT_KEY);
+                if (upperOption != null) {
+                    return upperOption;
+                }
             }
         }
         throw new IllegalArgumentException("No option found with value '" + value + "' for custom field " + customField.getName() + " on issue " + issue.getKey() + ".");
@@ -849,6 +886,18 @@ public class WorkflowUtils {
         }
         params.transformStringsToObjects();
         return params;
+    }
+
+    private Map<String, Option> convertValueToMap(CustomField customField, Option option) {
+        Map<String, Option> map = new HashMap<String, Option>();
+        Option upperOption = option.getParentOption();
+        if (upperOption != null) {
+            map.put(CascadingSelectCFType.PARENT_KEY, upperOption);
+            map.put(CascadingSelectCFType.CHILD_KEY, option);
+        } else {
+            map.put(CascadingSelectCFType.PARENT_KEY, option);
+        }
+        return map;
     }
 
     private <T> ArrayList<T> asArrayList(T value) {
