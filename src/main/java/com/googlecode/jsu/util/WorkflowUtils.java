@@ -420,8 +420,6 @@ public class WorkflowUtils {
                 }
             } else if (newValue instanceof Option && !(cfType instanceof MultipleSettableCustomFieldType)) {
                 newValue = ((Option) newValue).getValue();
-            } else if (newValue instanceof User && !(cfType instanceof UserCFType)) {
-                newValue = ((User)newValue).getName();
             } else if (cfType instanceof UserCFType) {
                 newValue = convertValueToUser(newValue);
             } else if (cfType instanceof AbstractMultiCFType) {
@@ -431,6 +429,8 @@ public class WorkflowUtils {
                 if (newValue != null) {
                     newValue = asArrayList(newValue);
                 }
+            } else if (newValue instanceof User) {
+                newValue = ((User)newValue).getName();
             }
 
             if (log.isDebugEnabled()) {
