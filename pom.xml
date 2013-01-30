@@ -18,6 +18,11 @@
     <name>Innovalog</name>
     <url>http://www.innovalog.com</url>
   </organization>
+  <scm>
+      <connection>scm:git:git://github.com/innovalog/jira-workflow-utilities-jar.git</connection>
+      <developerConnection>scm:git:https://github.com/innovalog/jira-workflow-utilities-jar.git</developerConnection>
+  </scm>
+
   <build>
     <plugins>
       <plugin>
