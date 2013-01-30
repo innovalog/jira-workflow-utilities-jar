@@ -5,7 +5,7 @@
   <groupId>com.innovalog</groupId>
   <artifactId>workflow_utils</artifactId>
   <name>Jira Workflow Utilities</name>
-  <version>1.6</version>
+  <version>1.7-SNAPSHOT</version>
   <packaging>jar</packaging>
   <developers>
     <developer>
@@ -33,7 +33,7 @@
     <dependency>
       <groupId>com.atlassian.jira</groupId>
       <artifactId>atlassian-jira</artifactId>
-      <version>4.4</version>
+      <version>5.2.4</version>
       <scope>provided</scope>
     </dependency>
     <dependency>

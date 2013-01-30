@@ -159,17 +159,19 @@ public class WorkflowUtils {
     }
 
     /**
+     *
      * @param issue
      *            an issue object.
      * @param field
      *            a field object. (May be a Custom Field)
+     * @param catenateCascade
      * @return an Object
      *
      * It returns the value of a field within issue object. May be a Collection,
      * a List, a Strong, or any FildType within JIRA.
      *
      */
-    public Object getFieldValueFromIssue(Issue issue, Field field) {
+    public Object getFieldValueFromIssue(Issue issue, Field field, boolean catenateCascade) {
         Object retVal = null;
 
         try {
@@ -187,7 +189,10 @@ public class WorkflowUtils {
 
                         if (parent != null) {
                             if (ObjectUtils.isValueSelected(child)) {
-                                retVal = child.toString();
+                              if (catenateCascade)
+                                  retVal = parent.toString() + " - " + child.toString();
+                                else
+                                  retVal = child.toString();
                             } else {
                                 final List<Option> childOptions = parent.getChildOptions();
 
