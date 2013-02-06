@@ -7,6 +7,11 @@
   <name>Jira Workflow Utilities</name>
   <version>1.8-SNAPSHOT</version>
   <packaging>jar</packaging>
+
+  <properties>
+    <jira.version>5.2.4</jira.version>
+  </properties>
+
   <developers>
     <developer>
       <name>David Fischer</name>
@@ -43,8 +48,8 @@
   <dependencies>
     <dependency>
       <groupId>com.atlassian.jira</groupId>
-      <artifactId>atlassian-jira</artifactId>
-      <version>5.2.4</version>
+      <artifactId>jira-core</artifactId>
+      <version>${jira.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
