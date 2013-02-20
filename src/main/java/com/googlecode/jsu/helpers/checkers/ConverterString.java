@@ -1,14 +1,13 @@
 package com.googlecode.jsu.helpers.checkers;
 
 import com.atlassian.crowd.embedded.api.Group;
-import com.atlassian.crowd.embedded.api.User;
 import com.atlassian.jira.issue.customfields.option.Option;
+import com.atlassian.jira.usercompatibility.UserCompatibilityHelper;
 import org.apache.commons.lang.StringUtils;
 import org.ofbiz.core.entity.GenericEntity;
 
 import com.atlassian.jira.issue.IssueConstant;
 import com.atlassian.jira.project.Project;
-//import com.opensymphony.user.Entity;
 
 
 import java.lang.reflect.Method;
@@ -50,8 +49,8 @@ public class ConverterString implements ValueConverter {
             return ((Option) value).getValue();
         } else if (value instanceof com.atlassian.jira.issue.fields.option.Option) {
             return ((com.atlassian.jira.issue.fields.option.Option) value).getName();
-        } else if (value instanceof User) {
-            return ((User) value).getName();
+        } else if (UserCompatibilityHelper.isUserObject(value)) {
+          return UserCompatibilityHelper.convertUserObject(value).getKey();
         } else if (value instanceof Group) {
             return ((Group) value).getName();
         } else if (value instanceof GenericEntity) {

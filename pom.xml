@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.innovalog</groupId>
@@ -24,8 +25,8 @@
     <url>http://www.innovalog.com</url>
   </organization>
   <scm>
-      <connection>scm:git:git://github.com/innovalog/jira-workflow-utilities-jar.git</connection>
-      <developerConnection>scm:git:https://github.com/innovalog/jira-workflow-utilities-jar.git</developerConnection>
+    <connection>scm:git:git://github.com/innovalog/jira-workflow-utilities-jar.git</connection>
+    <developerConnection>scm:git:https://github.com/innovalog/jira-workflow-utilities-jar.git</developerConnection>
   </scm>
 
   <build>
@@ -44,7 +45,8 @@
         <artifactId>wagon-webdav</artifactId>
         <version>1.0-beta-2</version>
       </extension>
-    </extensions></build>
+    </extensions>
+  </build>
   <dependencies>
     <dependency>
       <groupId>com.atlassian.jira</groupId>
@@ -64,24 +66,29 @@
       <version>[1.5.0,1.99.9999]</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>com.atlassian.usercompatibility</groupId>
+      <artifactId>usercompatibility-jira</artifactId>
+      <version>0.10</version>
+    </dependency>
   </dependencies>
   <repositories>
-      <repository>
-          <id>atlassian</id>
-          <url>https://maven.atlassian.com/repository/public</url>
-      </repository>
+    <repository>
+      <id>atlassian</id>
+      <url>https://maven.atlassian.com/repository/public</url>
+    </repository>
   </repositories>
   <distributionManagement>
-      <repository>
-          <id>atlassian-contrib</id>
-          <name>Atlassian Contrib Repository</name>
-          <url>dav:https://maven.atlassian.com/contrib</url>
-      </repository>
-      <snapshotRepository>
-          <id>atlassian-contrib-snapshot</id>
-          <name>Atlassian Contrib Snapshot Repository</name>
-          <url>dav:https://maven.atlassian.com/contrib-snapshot</url>
-      </snapshotRepository>
+    <repository>
+      <id>atlassian-contrib</id>
+      <name>Atlassian Contrib Repository</name>
+      <url>dav:https://maven.atlassian.com/contrib</url>
+    </repository>
+    <snapshotRepository>
+      <id>atlassian-contrib-snapshot</id>
+      <name>Atlassian Contrib Snapshot Repository</name>
+      <url>dav:https://maven.atlassian.com/contrib-snapshot</url>
+    </snapshotRepository>
   </distributionManagement>
 
 </project>
