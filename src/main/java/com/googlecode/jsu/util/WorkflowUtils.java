@@ -796,7 +796,7 @@ public class WorkflowUtils {
     }
   }
 
-  private Object convertValueToAppUser(Object value) {
+  public Object convertValueToAppUser(Object value) {
     if (value instanceof Collection<?>) {
       Collection list = new ArrayList(((Collection) value).size());
       for (Object obj : (Collection)value) {
