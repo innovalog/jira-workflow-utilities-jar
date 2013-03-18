@@ -78,6 +78,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -435,9 +436,12 @@ public class WorkflowUtils {
         if (customField.getCustomFieldType() instanceof MultiUserCFType) {
           newValue = convertValueToAppUser(newValue);
         } else if (((customField.getCustomFieldType() instanceof AbstractMultiCFType) ||
-          (customField.getCustomFieldType() instanceof MultipleCustomFieldType)
-          || (customField.getCustomFieldType() instanceof LabelsCFType))) {
+          (customField.getCustomFieldType() instanceof MultipleCustomFieldType))) {
           // format already correct
+        } else if (customField.getCustomFieldType() instanceof LabelsCFType) {
+          if (!(newValue instanceof Set)) {
+            newValue = new HashSet((Collection) newValue);
+          }
         } else {
           //convert from string to Object
           CustomFieldParams fieldParams = new CustomFieldParamsImpl(
