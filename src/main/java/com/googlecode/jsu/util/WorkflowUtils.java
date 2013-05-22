@@ -900,20 +900,16 @@ public class WorkflowUtils {
     throw new IllegalArgumentException("Wrong project value '" + value + "'.");
   }
 
-  private CustomFieldParamsImpl convertOptionToCustomFieldParamsImpl(CustomField customField, Option option) {
-    CustomFieldParamsImpl params = new CustomFieldParamsImpl(customField);
+  private Map convertOptionToCustomFieldParamsImpl(CustomField customField, Option option) {
+    Map params = new HashMap();
     Option upperOption = option.getParentOption();
     Collection<String> val;
     if (upperOption != null) {
-      val = asArrayList(upperOption.getOptionId().toString());
-      params.put(CascadingSelectCFType.PARENT_KEY, val);
-      val = asArrayList(option.getOptionId().toString());
-      params.put(CascadingSelectCFType.CHILD_KEY, val);
+      params.put(CascadingSelectCFType.PARENT_KEY, upperOption);
+      params.put(CascadingSelectCFType.CHILD_KEY, option);
     } else {
-      val = asArrayList(option.getOptionId().toString());
-      params.put(CascadingSelectCFType.PARENT_KEY, val);
+      params.put(CascadingSelectCFType.PARENT_KEY, option);
     }
-    params.transformStringsToObjects();
     return params;
   }
 
