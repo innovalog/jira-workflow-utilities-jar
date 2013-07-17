@@ -21,6 +21,7 @@ import com.atlassian.jira.issue.customfields.MultipleCustomFieldType;
 import com.atlassian.jira.issue.customfields.MultipleSettableCustomFieldType;
 import com.atlassian.jira.issue.customfields.impl.AbstractMultiCFType;
 import com.atlassian.jira.issue.customfields.impl.CascadingSelectCFType;
+import com.atlassian.jira.issue.customfields.impl.FieldValidationException;
 import com.atlassian.jira.issue.customfields.impl.LabelsCFType;
 import com.atlassian.jira.issue.customfields.impl.MultiSelectCFType;
 import com.atlassian.jira.issue.customfields.impl.MultiUserCFType;
@@ -34,6 +35,7 @@ import com.atlassian.jira.issue.customfields.view.CustomFieldParamsImpl;
 import com.atlassian.jira.issue.fields.CustomField;
 import com.atlassian.jira.issue.fields.Field;
 import com.atlassian.jira.issue.fields.FieldManager;
+import com.atlassian.jira.issue.fields.OrderableField;
 import com.atlassian.jira.issue.fields.config.FieldConfig;
 import com.atlassian.jira.issue.fields.layout.field.FieldLayoutItem;
 import com.atlassian.jira.issue.fields.screen.FieldScreen;
@@ -803,7 +805,7 @@ public class WorkflowUtils {
   public Object convertValueToAppUser(Object value) {
     if (value instanceof Collection<?>) {
       Collection list = new ArrayList(((Collection) value).size());
-      for (Object obj : (Collection)value) {
+      for (Object obj : (Collection) value) {
         list.add(convertValueToAppUser(obj));
       }
       return list;
@@ -1035,4 +1037,62 @@ public class WorkflowUtils {
   public FieldScreen getFieldScreen(ActionDescriptor actionDescriptor) {
     return workflowActionsBean.getFieldScreenForView(actionDescriptor);
   }
+
+  public Object convertValue(Field field, Object value, Issue issue) {
+
+    if (value instanceof String[]) {
+      return stringsToObject(field, (String[]) value, issue);
+    }
+    if (value instanceof String) {
+      return stringToObject(field, (String)value, issue);
+    }
+
+    return value;
+  }
+
+  private Object stringsToObject(Field field, String[] value, Issue issue) {
+    ArrayList values = new ArrayList(((String[])value).length);
+    for (String v : (String[])value) {
+      Object o = stringToObject(field, v, issue);
+      if (o instanceof Collection)
+        values.addAll((Collection)o);
+      else
+        values.add(o);
+    }
+    return values;
+  }
+
+  private Object stringToObject(Field field, String string, Issue issue) {
+    boolean wrapInCollection = false;
+    if (field instanceof CustomField && ((CustomField)field).getCustomFieldType() instanceof AbstractMultiCFType ) {
+      Collection<String> strings = MultiSelectCFType.extractTransferObjectFromString(string);
+      if (strings.size() > 1)
+        return stringsToObject(field, strings.toArray(new String[0]), issue);
+      else
+        wrapInCollection = true;
+    }
+    if (field instanceof OrderableField) {
+      OrderableField orderableField = (OrderableField) field;
+      Map values = new HashMap();
+      if (field instanceof CustomField) {
+        try {
+          Object singleObject = ((CustomField) field).getCustomFieldType().getSingularObjectFromString(string);
+          if (singleObject==null)
+            return string;
+          if (wrapInCollection)
+            return Collections.singleton(singleObject);
+          else
+            return singleObject;
+        } catch (FieldValidationException e) {
+          return string;
+        }
+      } else {
+        orderableField.populateParamsFromString(values, string, issue);
+        return orderableField.getValueFromParams(values);
+      }
+    }
+    else
+      return string;
+  }
+
 }
