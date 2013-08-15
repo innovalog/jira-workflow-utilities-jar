@@ -821,6 +821,10 @@ public class WorkflowUtils {
     try {
       Method getUserByKeyMethod = userManager.getClass().getMethod("getUserByKey", String.class);
       user = getUserByKeyMethod.invoke(userManager, convertToString(value));
+      if (user==null) {
+        Method getUserByNameMethod = userManager.getClass().getMethod("getUserByName", String.class);
+        user = getUserByNameMethod.invoke(userManager, convertToString(value));
+      }
     } catch (NoSuchMethodException e) {
       throw new RuntimeException(e);
     } catch (IllegalAccessException e) {
