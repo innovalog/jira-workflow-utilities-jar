@@ -218,7 +218,9 @@ public class WorkflowUtils {
                   retVal = parent.toString() + " - " + child.toString();
                 else
                   retVal = child.toString();
-              } else {
+              } else if (catenateCascade)
+                retVal = parent.toString();
+              else {
                 final List<Option> childOptions = parent.getChildOptions();
 
                 if ((childOptions == null) || (childOptions.isEmpty())) {
