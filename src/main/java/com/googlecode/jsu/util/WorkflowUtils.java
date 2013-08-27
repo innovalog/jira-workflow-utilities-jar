@@ -792,9 +792,12 @@ public class WorkflowUtils {
     if (value == null) {
       return Collections.emptySet();
     } else if (value instanceof Version) {
-      return (Arrays.asList((Version) value));
+      return (Arrays.asList(adaptVersionToProject((Version) value, issue.getProjectObject())));
     } else if (value instanceof Collection) {
-      return (Collection<Version>) value;
+      List<Version> versions = new ArrayList<Version>(((Collection)value).size());
+      for (Object v : (Collection)value)
+        versions.add(adaptVersionToProject((Version) v, issue.getProjectObject()));
+      return versions;
     } else {
       Version v = versionManager.getVersion(issue.getProjectObject().getId(), convertToString(value));
       if (v != null) {
@@ -802,6 +805,15 @@ public class WorkflowUtils {
       }
       throw new IllegalArgumentException("Wrong version value '" + value + "'.");
     }
+  }
+
+  private Version adaptVersionToProject(Version version, Project project) {
+    if (version.getProjectObject().equals(project))
+      return version;
+    Version v = versionManager.getVersion(project.getId(), version.getName());
+    if (v==null)
+      throw new IllegalArgumentException("Version '" + version.getName() + "' does not exist in project '" + project.getName() +"'.");
+    return v;
   }
 
   public Object convertValueToAppUser(Object value) {
