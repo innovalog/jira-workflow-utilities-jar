@@ -184,7 +184,11 @@ public class WorkflowUtils {
     Map args = functionDescriptor.getArgs();
     String fieldKey = (String) args.get(name);
 
-    return getFieldFromKey(fieldKey);
+    try {
+      return getFieldFromKey(fieldKey);
+    } catch (Exception e) {
+      return null;
+    }
   }
 
   /**
