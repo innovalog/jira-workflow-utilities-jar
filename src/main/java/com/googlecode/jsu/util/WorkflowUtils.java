@@ -715,6 +715,8 @@ public class WorkflowUtils {
       } else if (fieldId.equals(IssueFieldConstants.LABELS)) {
         if ((value == null) || (value instanceof Set)) {
           issue.setLabels((Set<Label>) value);
+        } else if (value instanceof Collection) {
+            issue.setLabels(new HashSet<Label>((Collection)value));
         } else {
           throw new UnsupportedOperationException("Wrong value type for setting 'Labels'");
         }
@@ -1064,6 +1066,10 @@ public class WorkflowUtils {
 
     if (value instanceof String[]) {
       return stringsToObject(field, (String[]) value, issue);
+    }
+    if (value instanceof ArrayList && (((ArrayList) value).size()>0)
+      && ((ArrayList)value).get(0) instanceof String) {
+      return stringsToObject(field, ((ArrayList<String>)value).toArray(new String[0]), issue);
     }
     if (value instanceof String) {
       return stringToObject(field, (String)value, issue);
