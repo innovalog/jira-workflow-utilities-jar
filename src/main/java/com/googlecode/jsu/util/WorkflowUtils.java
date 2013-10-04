@@ -48,11 +48,13 @@ import com.atlassian.jira.issue.security.IssueSecurityLevelManager;
 import com.atlassian.jira.issue.status.Status;
 import com.atlassian.jira.issue.util.AggregateTimeTrackingCalculatorFactory;
 import com.atlassian.jira.issue.util.IssueChangeHolder;
+import com.atlassian.jira.issue.watchers.WatcherManager;
 import com.atlassian.jira.issue.worklog.WorkRatio;
 import com.atlassian.jira.project.Project;
 import com.atlassian.jira.project.ProjectManager;
 import com.atlassian.jira.project.version.Version;
 import com.atlassian.jira.project.version.VersionManager;
+import com.atlassian.jira.security.JiraAuthenticationContext;
 import com.atlassian.jira.user.util.UserManager;
 import com.atlassian.jira.usercompatibility.UserCompatibilityHelper;
 import com.atlassian.jira.util.BuildUtilsInfo;
@@ -110,6 +112,8 @@ public class WorkflowUtils {
   private final AggregateTimeTrackingCalculatorFactory aggregateTimeTrackingCalculatorFactory;
   private final ConstantsManager constantsManager;
   private final BuildUtilsInfo buildUtilsInfo;
+  private final WatcherManager watcherManager;
+  private final JiraAuthenticationContext authenticationContext;
 
   /**
    * @param fieldManager
@@ -122,17 +126,18 @@ public class WorkflowUtils {
    * @param issueLinkManager
    * @param labelManager
    * @param aggregateTimeTrackingCalculatorFactory
-   *
    * @param constantsManager
    * @param buildUtilsInfo
-   */
+   * @param watcherManager
+   * @param authenticationContext
+   * */
   public WorkflowUtils(
     FieldManager fieldManager, IssueManager issueManager,
     ProjectComponentManager projectComponentManager, VersionManager versionManager,
     IssueSecurityLevelManager issueSecurityLevelManager, ApplicationProperties applicationProperties,
     FieldCollectionsUtils fieldCollectionsUtils, IssueLinkManager issueLinkManager,
     UserManager userManager, CrowdService crowdService, OptionsManager optionsManager,
-    ProjectManager projectManager, LabelManager labelManager, AggregateTimeTrackingCalculatorFactory aggregateTimeTrackingCalculatorFactory, ConstantsManager constantsManager, BuildUtilsInfo buildUtilsInfo) {
+    ProjectManager projectManager, LabelManager labelManager, AggregateTimeTrackingCalculatorFactory aggregateTimeTrackingCalculatorFactory, ConstantsManager constantsManager, BuildUtilsInfo buildUtilsInfo, WatcherManager watcherManager, JiraAuthenticationContext authenticationContext) {
     this.fieldManager = fieldManager;
     this.issueManager = issueManager;
     this.projectComponentManager = projectComponentManager;
@@ -149,6 +154,8 @@ public class WorkflowUtils {
     this.aggregateTimeTrackingCalculatorFactory = aggregateTimeTrackingCalculatorFactory;
     this.constantsManager = constantsManager;
     this.buildUtilsInfo = buildUtilsInfo;
+    this.watcherManager = watcherManager;
+    this.authenticationContext = authenticationContext;
   }
 
   /**
@@ -351,6 +358,8 @@ public class WorkflowUtils {
           retVal = issue.getResolutionDate();
         } else if (fieldId.equals(IssueFieldConstants.LABELS)) {
           retVal = issue.getLabels();
+        } else if (fieldId.equals(IssueFieldConstants.WATCHES)) { //this is actually shown by JIRA as the "watchers" field
+          retVal = watcherManager.getCurrentWatchList(issue, authenticationContext.getLocale());
         } else {
           log.warn("Issue field \"" + fieldId + "\" is not supported.");
 
@@ -711,6 +720,18 @@ public class WorkflowUtils {
           issue.setDescription((String) value);
         } else {
           issue.setDescription(value.toString());
+        }
+      } else if (fieldId.equals(IssueFieldConstants.WATCHES)) { //this is the watchers field
+        if (value instanceof Collection) {
+          for (Object v : ((Collection)value)) {
+            User u = convertValueToUser(v);
+            if (u != null && !watcherManager.isWatching(u,issue))
+              watcherManager.startWatching(u,issue);
+          }
+        } else {
+          User u = convertValueToUser(value);
+          if (u != null && !watcherManager.isWatching(u,issue))
+            watcherManager.startWatching(u,issue);
         }
       } else if (fieldId.equals(IssueFieldConstants.LABELS)) {
         if ((value == null) || (value instanceof Set)) {
@@ -1122,5 +1143,4 @@ public class WorkflowUtils {
     else
       return string;
   }
-
 }
