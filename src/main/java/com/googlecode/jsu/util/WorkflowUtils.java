@@ -887,9 +887,23 @@ public class WorkflowUtils {
       return (User) value;
     } else {
       User user = UserCompatibilityHelper.getUserForKey(convertToString(value));
-      if (user != null) {
+      if (user != null)
         return user;
+      if (buildUtilsInfo.getVersionNumbers()[0] >= 6) {
+        try {
+          Method getUserByNameMethod = userManager.getClass().getMethod("getUserByName", String.class);
+          user = UserCompatibilityHelper.convertUserObject(getUserByNameMethod.invoke(userManager, convertToString(value))).getUser();
+        } catch (IllegalAccessException e) {
+          throw new RuntimeException(e);
+        } catch (InvocationTargetException e) {
+          throw new RuntimeException(e);
+        } catch (NoSuchMethodException e) {
+          throw new RuntimeException(e);
+        }
       }
+      if (user != null)
+        return user;
+
       throw new IllegalArgumentException("User '" + value + "' not found.");
     }
   }

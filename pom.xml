@@ -62,7 +62,7 @@
     <dependency>
       <groupId>com.atlassian.usercompatibility</groupId>
       <artifactId>usercompatibility-jira</artifactId>
-      <version>0.10</version>
+      <version>0.18</version>
     </dependency>
   </dependencies>
   <repositories>
