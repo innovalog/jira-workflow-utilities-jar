@@ -22,6 +22,7 @@ import com.atlassian.jira.issue.fields.screen.FieldScreenTab;
 import com.atlassian.jira.util.I18nHelper;
 import com.atlassian.jira.util.I18nHelper.BeanFactory;
 import com.atlassian.jira.web.FieldVisibilityManager;
+import com.google.common.collect.Sets;
 import com.googlecode.jsu.helpers.NameComparatorEx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,18 @@ public class FieldCollectionsUtils {
             IssueFieldConstants.TIMETRACKING,
             IssueFieldConstants.WORKLOG
     );
+
+  private static final Set<String> FORBIDDEN_FIELDS = Sets.newHashSet(
+    IssueFieldConstants.ISSUE_TYPE,
+    IssueFieldConstants.ISSUE_KEY,
+    IssueFieldConstants.ISSUE_LINKS,
+    IssueFieldConstants.ATTACHMENT,
+    IssueFieldConstants.STATUS,
+    IssueFieldConstants.AGGREGATE_PROGRESS,
+    IssueFieldConstants.AGGREGATE_TIME_ESTIMATE,
+    IssueFieldConstants.AGGREGATE_TIME_ORIGINAL_ESTIMATE,
+    IssueFieldConstants.AGGREGATE_TIME_SPENT
+  );
 
     private final I18nHelper.BeanFactory i18nHelper;
     private final ApplicationProperties applicationProperties;
@@ -107,6 +120,7 @@ public class FieldCollectionsUtils {
             final Set<NavigableField> fields = fieldManager.getAllAvailableNavigableFields();
 
             for (Field f : fields) {
+              if (! FORBIDDEN_FIELDS.contains(f.getId()))
                 allFields.add(f);
             }
         } catch (FieldException e) {
