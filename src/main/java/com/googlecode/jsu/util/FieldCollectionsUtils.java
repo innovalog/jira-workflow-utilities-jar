@@ -49,18 +49,6 @@ public class FieldCollectionsUtils {
             IssueFieldConstants.WORKLOG
     );
 
-  private static final Set<String> FORBIDDEN_FIELDS = Sets.newHashSet(
-    IssueFieldConstants.ISSUE_TYPE,
-    IssueFieldConstants.ISSUE_KEY,
-    IssueFieldConstants.ISSUE_LINKS,
-    IssueFieldConstants.ATTACHMENT,
-    IssueFieldConstants.STATUS,
-    IssueFieldConstants.AGGREGATE_PROGRESS,
-    IssueFieldConstants.AGGREGATE_TIME_ESTIMATE,
-    IssueFieldConstants.AGGREGATE_TIME_ORIGINAL_ESTIMATE,
-    IssueFieldConstants.AGGREGATE_TIME_SPENT
-  );
-
     private final I18nHelper.BeanFactory i18nHelper;
     private final ApplicationProperties applicationProperties;
     private final DateTimeFormatter dateTimeFormatter;
@@ -120,8 +108,7 @@ public class FieldCollectionsUtils {
             final Set<NavigableField> fields = fieldManager.getAllAvailableNavigableFields();
 
             for (Field f : fields) {
-              if (! FORBIDDEN_FIELDS.contains(f.getId()))
-                allFields.add(f);
+              allFields.add(f);
             }
         } catch (FieldException e) {
             log.error("Unable to load navigable fields", e);
@@ -310,25 +297,22 @@ public class FieldCollectionsUtils {
     }
 
     /**
-     * @return a list of fields that will be eliminated from getCopyFromFields().
+     * @return a list of fields that will be eliminated from getCopyToFields().
      */
     private List<Field> getNonCopyToFields(){
         return asFields(
                 ATTACHMENT,
                 COMMENT,
-                //COMPONENTS,
                 CREATED,
                 TIMETRACKING,
-                //TIME_ORIGINAL_ESTIMATE,
-                //TIME_ESTIMATE,
-                //TIME_SPENT,
                 AGGREGATE_TIME_ORIGINAL_ESTIMATE,
                 AGGREGATE_TIME_ESTIMATE,
                 AGGREGATE_PROGRESS,
+                AGGREGATE_TIME_SPENT,
                 ISSUE_KEY,
                 ISSUE_LINKS,
-                ISSUE_TYPE,
                 PROJECT,
+                STATUS,
                 SUBTASKS,
                 THUMBNAIL,
                 UPDATED,

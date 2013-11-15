@@ -39,6 +39,7 @@ import com.atlassian.jira.issue.fields.OrderableField;
 import com.atlassian.jira.issue.fields.config.FieldConfig;
 import com.atlassian.jira.issue.fields.layout.field.FieldLayoutItem;
 import com.atlassian.jira.issue.fields.screen.FieldScreen;
+import com.atlassian.jira.issue.issuetype.IssueType;
 import com.atlassian.jira.issue.label.Label;
 import com.atlassian.jira.issue.label.LabelManager;
 import com.atlassian.jira.issue.link.IssueLinkManager;
@@ -560,7 +561,14 @@ public class WorkflowUtils {
         //				// Not implemented, yet.
         //				isEmpty = true;
       } else if (fieldId.equals(IssueFieldConstants.ISSUE_TYPE)) {
-        throw new UnsupportedOperationException("Not implemented");
+        if (value instanceof String) {
+          issue.setIssueTypeId((String) value);
+        } else if (value instanceof GenericValue) {
+          issue.setIssueType((GenericValue) value);
+        } else if (value instanceof IssueType) {
+          issue.setIssueTypeObject((IssueType) value);
+        } else
+          throw new IllegalArgumentException("Invalid Issue Type: "+value);
         //
         //				retVal = issue.getIssueTypeObject();
       } else if (fieldId.equals(IssueFieldConstants.TIMETRACKING)) {
