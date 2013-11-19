@@ -40,9 +40,9 @@
     </plugins>
     <extensions>
       <extension>
-        <groupId>org.apache.maven.wagon</groupId>
-        <artifactId>wagon-webdav</artifactId>
-        <version>1.0-beta-2</version>
+        <groupId>ar.com.synergian</groupId>
+            <artifactId>wagon-git</artifactId>
+            <version>0.2.0</version>
       </extension>
     </extensions>
   </build>
@@ -70,18 +70,28 @@
       <id>atlassian</id>
       <url>https://maven.atlassian.com/repository/public</url>
     </repository>
+    <repository>
+      <id>synergian-repo</id>
+      <url>https://raw.github.com/synergian/wagon-git/releases</url>
+    </repository>
   </repositories>
   <distributionManagement>
-    <repository>
-      <id>atlassian-contrib</id>
-      <name>Atlassian Contrib Repository</name>
-      <url>dav:https://maven.atlassian.com/contrib</url>
-    </repository>
     <snapshotRepository>
-      <id>atlassian-contrib-snapshot</id>
-      <name>Atlassian Contrib Snapshot Repository</name>
-      <url>dav:https://maven.atlassian.com/contrib-snapshot</url>
+      <id>github-jwu-snapshots</id>
+      <name>jira-workflow-utilities-jar</name>
+      <url>git:snapshots://git@innovalog-github.com:innovalog/jira-workflow-utilities-jar.git</url>
     </snapshotRepository>
+    <repository>
+     <id>github-jwu</id>
+     <name>jira-workflow-utilities-jar</name>
+     <url>git:releases://git@innovalog-github.com:innovalog/jira-workflow-utilities-jar.git</url>
+   </repository>
   </distributionManagement>
+  <pluginRepositories>
+    <pluginRepository>
+      <id>synergian-repo</id>
+      <url>https://raw.github.com/synergian/wagon-git/releases</url>
+    </pluginRepository>
+  </pluginRepositories>
 
 </project>
