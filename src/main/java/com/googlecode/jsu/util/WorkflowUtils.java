@@ -199,6 +199,39 @@ public class WorkflowUtils {
     }
   }
 
+  public class CascadingSelectValue extends HashMap<String, Option> {
+    private boolean catenateCascade;
+    public CascadingSelectValue(HashMap<String, Option> v, boolean catenateCascade) {
+      this.putAll(v);
+      this.catenateCascade = catenateCascade;
+    }
+
+    @Override
+    public String toString() {
+        Option parent = get(CascadingSelectCFType.PARENT_KEY);
+        Option child = get(CascadingSelectCFType.CHILD_KEY);
+
+        if (parent != null) {
+          if (ObjectUtils.isValueSelected(child)) {
+            if (catenateCascade)
+              return parent.toString() + " - " + child.toString();
+            else
+              return child.toString();
+          } else if (catenateCascade)
+            return parent.toString();
+          else {
+            final List<Option> childOptions = parent.getChildOptions();
+
+            if ((childOptions == null) || (childOptions.isEmpty())) {
+              return parent.toString();
+            }
+          }
+        }
+
+      return null;
+    }
+  }
+
   /**
    * @param issue           an issue object.
    * @param field           a field object. (May be a Custom Field)
@@ -217,32 +250,10 @@ public class WorkflowUtils {
         CustomField customField = (CustomField) field;
         Object value = issue.getCustomFieldValue(customField);
 
-        if (customField.getCustomFieldType() instanceof CascadingSelectCFType) {
-          HashMap<String, Option> hashMapEntries = (HashMap<String, Option>) value;
-
-          if (hashMapEntries != null) {
-            Option parent = hashMapEntries.get(CascadingSelectCFType.PARENT_KEY);
-            Option child = hashMapEntries.get(CascadingSelectCFType.CHILD_KEY);
-
-            if (parent != null) {
-              if (ObjectUtils.isValueSelected(child)) {
-                if (catenateCascade)
-                  retVal = parent.toString() + " - " + child.toString();
-                else
-                  retVal = child.toString();
-              } else if (catenateCascade)
-                retVal = parent.toString();
-              else {
-                final List<Option> childOptions = parent.getChildOptions();
-
-                if ((childOptions == null) || (childOptions.isEmpty())) {
-                  retVal = parent.toString();
-                }
-              }
-            }
-          }
-        } else if (value instanceof Option) {
-          retVal = ((Option) value).toString();
+        if (customField.getCustomFieldType() instanceof CascadingSelectCFType && value!=null) {
+          retVal = new CascadingSelectValue((HashMap<String, Option>) value, catenateCascade);
+          if (catenateCascade && retVal!=null)
+            retVal=retVal.toString();
         } else {
           retVal = value;
         }
@@ -425,6 +436,8 @@ public class WorkflowUtils {
         String format = applicationProperties.getDefaultBackedString(APKeys.JIRA_DATE_TIME_PICKER_JAVA_FORMAT);
         DateFormat dateFormat = new SimpleDateFormat(format);
         newValue = dateFormat.format(value);
+      } else if (value instanceof CascadingSelectValue && !(cfType instanceof CascadingSelectCFType)) {
+        newValue = value.toString();
       }
 
       if (cfType instanceof VersionCFType) {
