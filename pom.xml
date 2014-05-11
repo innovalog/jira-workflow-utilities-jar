@@ -79,12 +79,12 @@
     <snapshotRepository>
       <id>github-jwu-snapshots</id>
       <name>jira-workflow-utilities-jar</name>
-      <url>git:snapshots://git@innovalog-github.com:innovalog/jira-workflow-utilities-jar.git</url>
+      <url>git:snapshots://git@github.com:innovalog/jira-workflow-utilities-jar.git</url>
     </snapshotRepository>
     <repository>
      <id>github-jwu</id>
      <name>jira-workflow-utilities-jar</name>
-     <url>git:releases://git@innovalog-github.com:innovalog/jira-workflow-utilities-jar.git</url>
+     <url>git:releases://git@github.com:innovalog/jira-workflow-utilities-jar.git</url>
    </repository>
   </distributionManagement>
   <pluginRepositories>
