@@ -5,7 +5,7 @@
   <groupId>com.innovalog</groupId>
   <artifactId>workflow_utils</artifactId>
   <name>Jira Workflow Utilities</name>
-  <version>1.27-SNAPSHOT</version>
+  <version>1.25-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <properties>
@@ -79,12 +79,12 @@
     <snapshotRepository>
       <id>github-jwu-snapshots</id>
       <name>jira-workflow-utilities-jar</name>
-      <url>git:snapshots://git@github.com:innovalog/jira-workflow-utilities-jar.git</url>
+      <url>git:snapshots://git@innovalog-github.com:innovalog/jira-workflow-utilities-jar.git</url>
     </snapshotRepository>
     <repository>
      <id>github-jwu</id>
      <name>jira-workflow-utilities-jar</name>
-     <url>git:releases://git@github.com:innovalog/jira-workflow-utilities-jar.git</url>
+     <url>git:releases://git@innovalog-github.com:innovalog/jira-workflow-utilities-jar.git</url>
    </repository>
   </distributionManagement>
   <pluginRepositories>
