@@ -254,6 +254,8 @@ public class WorkflowUtils {
           retVal = new CascadingSelectValue((HashMap<String, Option>) value, catenateCascade);
           if (catenateCascade && retVal!=null)
             retVal=retVal.toString();
+        } else if (value instanceof Option) {
+          retVal = value.toString();
         } else {
           retVal = value;
         }
