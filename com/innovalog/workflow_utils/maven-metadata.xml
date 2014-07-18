@@ -3,11 +3,12 @@
   <groupId>com.innovalog</groupId>
   <artifactId>workflow_utils</artifactId>
   <versioning>
-    <release>1.27</release>
+    <release>1.30</release>
     <versions>
       <version>1.26</version>
       <version>1.27</version>
+      <version>1.30</version>
     </versions>
-    <lastUpdated>20140704165328</lastUpdated>
+    <lastUpdated>20140718210358</lastUpdated>
   </versioning>
 </metadata>
