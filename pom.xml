@@ -5,7 +5,7 @@
   <groupId>com.innovalog</groupId>
   <artifactId>workflow_utils</artifactId>
   <name>Jira Workflow Utilities</name>
-  <version>1.32-SNAPSHOT</version>
+  <version>1.32</version>
   <packaging>jar</packaging>
 
   <properties>
