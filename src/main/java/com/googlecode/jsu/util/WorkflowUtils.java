@@ -884,7 +884,7 @@ public class WorkflowUtils {
     Object user;
     try {
       Method getUserByKeyMethod = userManager.getClass().getMethod("getUserByKey", String.class);
-      user = getUserByKeyMethod.invoke(userManager, convertToString(value));
+      user = getUserByKeyMethod.invoke(userManager, convertToString(value).toLowerCase());
       if (user==null) {
         Method getUserByNameMethod = userManager.getClass().getMethod("getUserByName", String.class);
         user = getUserByNameMethod.invoke(userManager, convertToString(value));
