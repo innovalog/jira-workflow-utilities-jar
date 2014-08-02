@@ -867,6 +867,10 @@ public class WorkflowUtils {
   }
 
   public Object convertValueToAppUser(Object value) {
+    return convertValueToAppUser(value, false);
+  }
+
+  public Object convertValueToAppUser(Object value, boolean evenIfUnknownAndNotJIRA5) {
     if (value instanceof Collection<?>) {
       Collection list = new ArrayList(((Collection) value).size());
       for (Object obj : (Collection) value) {
@@ -888,6 +892,10 @@ public class WorkflowUtils {
       if (user==null) {
         Method getUserByNameMethod = userManager.getClass().getMethod("getUserByName", String.class);
         user = getUserByNameMethod.invoke(userManager, convertToString(value));
+      }
+      if (user==null && evenIfUnknownAndNotJIRA5) {
+        Method getUserByKeyEvenWhenUnknownMethod = userManager.getClass().getMethod("getUserByKeyEvenWhenUnknown", String.class);
+        user = getUserByKeyEvenWhenUnknownMethod.invoke(userManager, convertToString(value).toLowerCase());
       }
     } catch (NoSuchMethodException e) {
       throw new RuntimeException(e);
