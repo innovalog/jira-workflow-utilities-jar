@@ -318,7 +318,7 @@ public class WorkflowUtils {
         } else if (fieldId.equals(IssueFieldConstants.TIMETRACKING)) {
           // Not implemented, yet.
         } else if (fieldId.equals(IssueFieldConstants.ISSUE_LINKS)) {
-          retVal = issueLinkManager.getOutwardLinks(issue.getId());
+          retVal = new ArrayList(issueLinkManager.getOutwardLinks(issue.getId()));
           ((Collection) retVal).addAll(issueLinkManager.getInwardLinks(issue.getId()));
         } else if (fieldId.equals(IssueFieldConstants.WORKRATIO)) {
           retVal = String.valueOf(WorkRatio.getWorkRatio(issue));
