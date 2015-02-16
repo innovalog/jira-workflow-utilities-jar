@@ -13,9 +13,9 @@ import com.atlassian.jira.issue.Issue;
 import com.atlassian.jira.issue.IssueConstant;
 import com.atlassian.jira.issue.IssueFieldConstants;
 import com.atlassian.jira.issue.IssueManager;
-import com.atlassian.jira.issue.IssueRelationConstants;
 import com.atlassian.jira.issue.ModifiedValue;
 import com.atlassian.jira.issue.MutableIssue;
+import com.atlassian.jira.issue.comments.CommentManager;
 import com.atlassian.jira.issue.customfields.CustomFieldType;
 import com.atlassian.jira.issue.customfields.MultipleCustomFieldType;
 import com.atlassian.jira.issue.customfields.MultipleSettableCustomFieldType;
@@ -115,6 +115,7 @@ public class WorkflowUtils {
   private final BuildUtilsInfo buildUtilsInfo;
   private final WatcherManager watcherManager;
   private final JiraAuthenticationContext authenticationContext;
+  private final CommentManager commentManager;
 
   /**
    * @param fieldManager
@@ -131,14 +132,14 @@ public class WorkflowUtils {
    * @param buildUtilsInfo
    * @param watcherManager
    * @param authenticationContext
-   * */
+   * @param commentManager             */
   public WorkflowUtils(
     FieldManager fieldManager, IssueManager issueManager,
     ProjectComponentManager projectComponentManager, VersionManager versionManager,
     IssueSecurityLevelManager issueSecurityLevelManager, ApplicationProperties applicationProperties,
     FieldCollectionsUtils fieldCollectionsUtils, IssueLinkManager issueLinkManager,
     UserManager userManager, CrowdService crowdService, OptionsManager optionsManager,
-    ProjectManager projectManager, LabelManager labelManager, AggregateTimeTrackingCalculatorFactory aggregateTimeTrackingCalculatorFactory, ConstantsManager constantsManager, BuildUtilsInfo buildUtilsInfo, WatcherManager watcherManager, JiraAuthenticationContext authenticationContext) {
+    ProjectManager projectManager, LabelManager labelManager, AggregateTimeTrackingCalculatorFactory aggregateTimeTrackingCalculatorFactory, ConstantsManager constantsManager, BuildUtilsInfo buildUtilsInfo, WatcherManager watcherManager, JiraAuthenticationContext authenticationContext, CommentManager commentManager) {
     this.fieldManager = fieldManager;
     this.issueManager = issueManager;
     this.projectComponentManager = projectComponentManager;
@@ -157,6 +158,7 @@ public class WorkflowUtils {
     this.buildUtilsInfo = buildUtilsInfo;
     this.watcherManager = watcherManager;
     this.authenticationContext = authenticationContext;
+    this.commentManager = commentManager;
   }
 
   /**
@@ -288,19 +290,9 @@ public class WorkflowUtils {
           }
         } else if (fieldId.equals(IssueFieldConstants.COMMENT)) {
           // return a list with the comments of a given issue.
-          try {
-            retCollection = issueManager.getEntitiesByIssueObject(
-              IssueRelationConstants.COMMENTS, issue
-            );
-
-            if (retCollection != null && !retCollection.isEmpty()) {
-              retVal = retCollection;
-            }
-          } catch (GenericEntityException e) {
-            retVal = null;
-          }
+          retCollection = commentManager.getComments(issue);
         } else if (fieldId.equals(IssueFieldConstants.COMPONENTS)) {
-          retCollection = issue.getComponents();
+          retCollection = issue.getComponentObjects();
 
           if (retCollection != null && !retCollection.isEmpty()) {
             retVal = retCollection;
@@ -339,7 +331,7 @@ public class WorkflowUtils {
         } else if (fieldId.equals(IssueFieldConstants.PROJECT)) {
           retVal = issue.getProjectObject();
         } else if (fieldId.equals(IssueFieldConstants.SECURITY)) {
-          retVal = issue.getSecurityLevel();
+          retVal = issue.getSecurityLevelId();
         } else if (fieldId.equals(IssueFieldConstants.TIME_ESTIMATE)) {
           retVal = issue.getEstimate();
         } else if (fieldId.equals(IssueFieldConstants.TIME_ORIGINAL_ESTIMATE)) {
