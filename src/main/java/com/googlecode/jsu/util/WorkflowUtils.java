@@ -874,8 +874,15 @@ public class WorkflowUtils {
     if (value == null)
       return null;
 
+    if (value instanceof User)
+      return UserCompatibilityHelper.getUserObjectApplicableForUserCF((User) value);
+
     if (buildUtilsInfo.getVersionNumbers()[0] < 6)
       return convertValueToUser(value);
+
+    //is it an ApplicationUser object?
+    if (UserCompatibilityHelper.isUserObject(value))
+      return value;
 
     Object user;
     try {
