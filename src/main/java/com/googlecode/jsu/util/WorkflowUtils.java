@@ -816,8 +816,15 @@ public class WorkflowUtils {
       return Collections.<GenericValue>emptySet();
     } else if (value instanceof GenericValue) {
       return Arrays.asList((GenericValue) value);
+    } else if (value instanceof ProjectComponent) {
+      return Arrays.asList(((ProjectComponent) value).getGenericValue());
     } else if (value instanceof Collection) {
-      return (Collection<GenericValue>) value;
+      if (((Collection)value).isEmpty())
+        return Collections.<GenericValue>emptySet();
+      List<GenericValue> retVal = new ArrayList<GenericValue>(((Collection) value).size());
+      for (Object o : ((Collection)value))
+        retVal.addAll(convertValueToComponents(issue,o));
+      return retVal;
     } else {
       ProjectComponent v = projectComponentManager.findByComponentName(
         issue.getProjectObject().getId(), convertToString(value)
