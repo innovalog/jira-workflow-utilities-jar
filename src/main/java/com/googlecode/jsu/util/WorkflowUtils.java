@@ -3,7 +3,7 @@ package com.googlecode.jsu.util;
 import com.atlassian.crowd.embedded.api.CrowdService;
 import com.atlassian.crowd.embedded.api.Group;
 import com.atlassian.crowd.embedded.api.User;
-import com.atlassian.jira.ComponentManager;
+import com.atlassian.jira.bc.project.component.ComponentConverter;
 import com.atlassian.jira.bc.project.component.ProjectComponent;
 import com.atlassian.jira.bc.project.component.ProjectComponentManager;
 import com.atlassian.jira.config.ConstantsManager;
@@ -56,6 +56,7 @@ import com.atlassian.jira.project.ProjectManager;
 import com.atlassian.jira.project.version.Version;
 import com.atlassian.jira.project.version.VersionManager;
 import com.atlassian.jira.security.JiraAuthenticationContext;
+import com.atlassian.jira.user.ApplicationUser;
 import com.atlassian.jira.user.util.UserManager;
 import com.atlassian.jira.usercompatibility.UserCompatibilityHelper;
 import com.atlassian.jira.util.BuildUtilsInfo;
@@ -116,6 +117,7 @@ public class WorkflowUtils {
   private final WatcherManager watcherManager;
   private final JiraAuthenticationContext authenticationContext;
   private final CommentManager commentManager;
+  private final ComponentConverter componentConverter;
 
   /**
    * @param fieldManager
@@ -132,7 +134,8 @@ public class WorkflowUtils {
    * @param buildUtilsInfo
    * @param watcherManager
    * @param authenticationContext
-   * @param commentManager             */
+   * @param commentManager
+   */
   public WorkflowUtils(
     FieldManager fieldManager, IssueManager issueManager,
     ProjectComponentManager projectComponentManager, VersionManager versionManager,
@@ -159,6 +162,7 @@ public class WorkflowUtils {
     this.watcherManager = watcherManager;
     this.authenticationContext = authenticationContext;
     this.commentManager = commentManager;
+    this.componentConverter = new ComponentConverter();
   }
 
   /**
@@ -365,7 +369,7 @@ public class WorkflowUtils {
         } else if (fieldId.equals(IssueFieldConstants.LABELS)) {
           retVal = issue.getLabels();
         } else if (fieldId.equals(IssueFieldConstants.WATCHES)) { //this is actually shown by JIRA as the "watchers" field
-          retVal = watcherManager.getCurrentWatchList(issue, authenticationContext.getLocale());
+          retVal = watcherManager.getWatchers(issue, authenticationContext.getLocale());
         } else {
           log.warn("Issue field \"" + fieldId + "\" is not supported.");
 
@@ -557,8 +561,8 @@ public class WorkflowUtils {
         //					retVal = null;
         //				}
       } else if (fieldId.equals(IssueFieldConstants.COMPONENTS)) {
-        Collection<GenericValue> components = convertValueToComponents(issue, value);
-        issue.setComponents(components);
+        Collection<ProjectComponent> components = convertValueToComponents(issue, value);
+        issue.setComponent(components);
       } else if (fieldId.equals(IssueFieldConstants.FIX_FOR_VERSIONS)) {
         Collection<Version> versions = convertValueToVersions(issue, value);
         issue.setFixVersions(versions);
@@ -571,7 +575,7 @@ public class WorkflowUtils {
         if (value instanceof String) {
           issue.setIssueTypeId((String) value);
         } else if (value instanceof GenericValue) {
-          issue.setIssueType((GenericValue) value);
+          issue.setIssueTypeId(((GenericValue) value).getString("id"));
         } else if (value instanceof IssueType) {
           issue.setIssueTypeObject((IssueType) value);
         } else
@@ -608,7 +612,7 @@ public class WorkflowUtils {
         if (value == null) {
           issue.setPriority(null);
         } else if (value instanceof GenericValue) {
-          issue.setStatus((GenericValue) value);
+          issue.setStatusId(((GenericValue) value).getString("id"));
         } else if (value instanceof Priority) {
           issue.setPriorityId(((Priority) value).getId());
         } else {
@@ -624,11 +628,11 @@ public class WorkflowUtils {
         if (value == null) {
           issue.setResolution(null);
         } else if (value instanceof GenericValue) {
-          issue.setResolution((GenericValue) value);
+          issue.setResolutionId(((GenericValue) value).getString("id"));
         } else if (value instanceof Resolution) {
           issue.setResolutionId(((Resolution) value).getId());
         } else {
-          Collection<Resolution> resolutions = ComponentManager.getInstance().getConstantsManager().getResolutionObjects();
+          Collection<Resolution> resolutions = constantsManager.getResolutions();
           Resolution resolution = null;
           String s = value.toString().trim();
 
@@ -650,11 +654,11 @@ public class WorkflowUtils {
         if (value == null) {
           issue.setStatus(null);
         } else if (value instanceof GenericValue) {
-          issue.setStatus((GenericValue) value);
+          issue.setStatusId(((GenericValue) value).getString("id"));
         } else if (value instanceof Status) {
           issue.setStatusId(((Status) value).getId());
         } else {
-          Status status = ComponentManager.getInstance().getConstantsManager().getStatusByName(value.toString());
+          Status status = constantsManager.getStatusByName(value.toString());
 
           if (status != null) {
             issue.setStatusId(status.getId());
@@ -695,7 +699,7 @@ public class WorkflowUtils {
           }
         }
       } else if (fieldId.equals(IssueFieldConstants.ASSIGNEE)) {
-        User user = convertValueToUser(value);
+        ApplicationUser user = (ApplicationUser) convertValueToAppUser(value);
         issue.setAssignee(user);
       } else if (fieldId.equals(IssueFieldConstants.DUE_DATE)) {
         if (value == null) {
@@ -722,7 +726,7 @@ public class WorkflowUtils {
           }
         }
       } else if (fieldId.equals(IssueFieldConstants.REPORTER)) {
-        User user = convertValueToUser(value);
+        ApplicationUser user = (ApplicationUser) convertValueToUser(value);
         issue.setReporter(user);
       } else if (fieldId.equals(IssueFieldConstants.SUMMARY)) {
         if ((value == null) || (value instanceof String)) {
@@ -739,12 +743,12 @@ public class WorkflowUtils {
       } else if (fieldId.equals(IssueFieldConstants.WATCHES)) { //this is the watchers field
         if (value instanceof Collection) {
           for (Object v : ((Collection)value)) {
-            User u = convertValueToUser(v);
+            ApplicationUser u = (ApplicationUser) convertValueToUser(v);
             if (u != null && !watcherManager.isWatching(u,issue))
               watcherManager.startWatching(u,issue);
           }
         } else {
-          User u = convertValueToUser(value);
+          ApplicationUser u = (ApplicationUser) convertValueToUser(value);
           if (u != null && !watcherManager.isWatching(u,issue))
             watcherManager.startWatching(u,issue);
         }
@@ -811,27 +815,24 @@ public class WorkflowUtils {
     throw new IllegalArgumentException("No option found with value '" + value + "' for custom field " + customField.getName() + " on issue " + issue.getKey() + ".");
   }
 
-  private Collection<GenericValue> convertValueToComponents(Issue issue, Object value) {
+  private Collection<ProjectComponent> convertValueToComponents(Issue issue, Object value) {
     if (value == null) {
-      return Collections.<GenericValue>emptySet();
+      return Collections.emptySet();
     } else if (value instanceof GenericValue) {
-      return Arrays.asList((GenericValue) value);
+      return Arrays.<ProjectComponent>asList(componentConverter.convertToComponent((GenericValue) value));
     } else if (value instanceof ProjectComponent) {
-      return Arrays.asList(((ProjectComponent) value).getGenericValue());
+      return Arrays.asList((ProjectComponent) value);
     } else if (value instanceof Collection) {
       if (((Collection)value).isEmpty())
-        return Collections.<GenericValue>emptySet();
-      List<GenericValue> retVal = new ArrayList<GenericValue>(((Collection) value).size());
-      for (Object o : ((Collection)value))
-        retVal.addAll(convertValueToComponents(issue,o));
-      return retVal;
+        return Collections.emptySet();
+      return (Collection)componentConverter.convertToComponents((Collection<GenericValue>) value);
     } else {
       ProjectComponent v = projectComponentManager.findByComponentName(
         issue.getProjectObject().getId(), convertToString(value)
       );
 
       if (v != null) {
-        return Arrays.asList(v.getGenericValue());
+        return Arrays.asList(v);
       }
       throw new IllegalArgumentException("Wrong component value '" + value + "'.");
     }
