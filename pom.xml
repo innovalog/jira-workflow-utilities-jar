@@ -9,7 +9,7 @@
   <packaging>jar</packaging>
 
   <properties>
-    <jira.version>7.0.0-20150524.092050</jira.version>
+    <jira.version>7.0.0-eap3</jira.version>
   </properties>
 
   <developers>
