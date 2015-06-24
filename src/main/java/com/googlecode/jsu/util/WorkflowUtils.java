@@ -632,7 +632,7 @@ public class WorkflowUtils {
         } else if (value instanceof Resolution) {
           issue.setResolutionId(((Resolution) value).getId());
         } else {
-          Collection<Resolution> resolutions = constantsManager.getResolutions();
+          Collection<Resolution> resolutions = constantsManager.getResolutionObjects();
           Resolution resolution = null;
           String s = value.toString().trim();
 
@@ -700,7 +700,7 @@ public class WorkflowUtils {
         }
       } else if (fieldId.equals(IssueFieldConstants.ASSIGNEE)) {
         ApplicationUser user = (ApplicationUser) convertValueToAppUser(value);
-        issue.setAssignee(user);
+        issue.setAssigneeId(user.getKey());
       } else if (fieldId.equals(IssueFieldConstants.DUE_DATE)) {
         if (value == null) {
           issue.setDueDate(null);
@@ -727,7 +727,7 @@ public class WorkflowUtils {
         }
       } else if (fieldId.equals(IssueFieldConstants.REPORTER)) {
         ApplicationUser user = (ApplicationUser) convertValueToUser(value);
-        issue.setReporter(user);
+        issue.setReporterId(user.getKey());
       } else if (fieldId.equals(IssueFieldConstants.SUMMARY)) {
         if ((value == null) || (value instanceof String)) {
           issue.setSummary((String) value);
