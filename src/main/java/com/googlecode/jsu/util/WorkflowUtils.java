@@ -700,7 +700,7 @@ public class WorkflowUtils {
         }
       } else if (fieldId.equals(IssueFieldConstants.ASSIGNEE)) {
         ApplicationUser user = (ApplicationUser) convertValueToAppUser(value);
-        issue.setAssigneeId(user.getKey());
+        issue.setAssigneeId(user==null?null:user.getKey());
       } else if (fieldId.equals(IssueFieldConstants.DUE_DATE)) {
         if (value == null) {
           issue.setDueDate(null);
@@ -727,7 +727,7 @@ public class WorkflowUtils {
         }
       } else if (fieldId.equals(IssueFieldConstants.REPORTER)) {
         ApplicationUser user = (ApplicationUser) convertValueToUser(value);
-        issue.setReporterId(user.getKey());
+        issue.setReporterId(user==null?null:user.getKey());
       } else if (fieldId.equals(IssueFieldConstants.SUMMARY)) {
         if ((value == null) || (value instanceof String)) {
           issue.setSummary((String) value);
