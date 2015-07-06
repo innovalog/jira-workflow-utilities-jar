@@ -10,6 +10,7 @@
 
   <properties>
     <jira.version>7.0.0-eap3</jira.version>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
   </properties>
 
   <developers>
