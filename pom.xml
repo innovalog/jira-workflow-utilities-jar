@@ -5,7 +5,7 @@
   <groupId>com.innovalog</groupId>
   <artifactId>workflow_utils</artifactId>
   <name>Jira Workflow Utilities</name>
-  <version>1.39.jira7</version>
+  <version>1.40.jira7-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <properties>
@@ -27,7 +27,7 @@
   <scm>
     <connection>scm:git:git://github.com/innovalog/jira-workflow-utilities-jar.git</connection>
     <developerConnection>scm:git:https://github.com/innovalog/jira-workflow-utilities-jar.git</developerConnection>
-    <tag>workflow_utils-1.39.jira7</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <build>
