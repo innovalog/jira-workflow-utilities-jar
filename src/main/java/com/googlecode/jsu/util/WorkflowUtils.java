@@ -9,6 +9,7 @@ import com.atlassian.jira.bc.project.component.ProjectComponentManager;
 import com.atlassian.jira.config.ConstantsManager;
 import com.atlassian.jira.config.properties.APKeys;
 import com.atlassian.jira.config.properties.ApplicationProperties;
+import com.atlassian.jira.issue.CustomFieldManager;
 import com.atlassian.jira.issue.Issue;
 import com.atlassian.jira.issue.IssueConstant;
 import com.atlassian.jira.issue.IssueFieldConstants;
@@ -116,6 +117,7 @@ public class WorkflowUtils {
   private final WatcherManager watcherManager;
   private final JiraAuthenticationContext authenticationContext;
   private final CommentManager commentManager;
+  private final CustomFieldManager customFieldManager;
 
   /**
    * @param fieldManager
@@ -132,14 +134,15 @@ public class WorkflowUtils {
    * @param buildUtilsInfo
    * @param watcherManager
    * @param authenticationContext
-   * @param commentManager             */
+   * @param commentManager
+   * @param customFieldManager                          */
   public WorkflowUtils(
     FieldManager fieldManager, IssueManager issueManager,
     ProjectComponentManager projectComponentManager, VersionManager versionManager,
     IssueSecurityLevelManager issueSecurityLevelManager, ApplicationProperties applicationProperties,
     FieldCollectionsUtils fieldCollectionsUtils, IssueLinkManager issueLinkManager,
     UserManager userManager, CrowdService crowdService, OptionsManager optionsManager,
-    ProjectManager projectManager, LabelManager labelManager, AggregateTimeTrackingCalculatorFactory aggregateTimeTrackingCalculatorFactory, ConstantsManager constantsManager, BuildUtilsInfo buildUtilsInfo, WatcherManager watcherManager, JiraAuthenticationContext authenticationContext, CommentManager commentManager) {
+    ProjectManager projectManager, LabelManager labelManager, AggregateTimeTrackingCalculatorFactory aggregateTimeTrackingCalculatorFactory, ConstantsManager constantsManager, BuildUtilsInfo buildUtilsInfo, WatcherManager watcherManager, JiraAuthenticationContext authenticationContext, CommentManager commentManager, CustomFieldManager customFieldManager) {
     this.fieldManager = fieldManager;
     this.issueManager = issueManager;
     this.projectComponentManager = projectComponentManager;
@@ -159,6 +162,7 @@ public class WorkflowUtils {
     this.watcherManager = watcherManager;
     this.authenticationContext = authenticationContext;
     this.commentManager = commentManager;
+    this.customFieldManager = customFieldManager;
   }
 
   /**
@@ -180,6 +184,16 @@ public class WorkflowUtils {
       field = fieldManager.getCustomField(key);
     } else {
       field = fieldManager.getField(key);
+    }
+
+    if (field==null) {
+      final Collection<CustomField> fields = customFieldManager.getCustomFieldObjectsByName(key);
+      if (fields != null) {
+        if (fields.size() > 1)
+          throw new IllegalArgumentException("More than one custom fields were found named '" + key + "'. Use the 'customfield_xxxxx' form instead.");
+        else
+          field = fields.iterator().next();
+      }
     }
 
     if (field == null) {
