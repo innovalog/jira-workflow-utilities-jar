@@ -63,6 +63,7 @@ import com.atlassian.jira.usercompatibility.UserCompatibilityHelper;
 import com.atlassian.jira.util.BuildUtilsInfo;
 import com.atlassian.jira.util.ObjectUtils;
 import com.atlassian.jira.workflow.WorkflowActionsBean;
+import com.google.common.base.Throwables;
 import com.googlecode.jsu.helpers.checkers.ConverterString;
 import com.opensymphony.workflow.loader.AbstractDescriptor;
 import com.opensymphony.workflow.loader.ActionDescriptor;
@@ -576,7 +577,7 @@ public class WorkflowUtils {
         //				}
       } else if (fieldId.equals(IssueFieldConstants.COMPONENTS)) {
         Collection<ProjectComponent> components = convertValueToComponents(issue, value);
-        issue.setComponent(components);
+        setIssueComponents(issue, components);
       } else if (fieldId.equals(IssueFieldConstants.FIX_FOR_VERSIONS)) {
         Collection<Version> versions = convertValueToVersions(issue, value);
         issue.setFixVersions(versions);
@@ -801,6 +802,28 @@ public class WorkflowUtils {
       } else {
         log.error("Issue field \"" + fieldId + "\" is not supported for setting.");
       }
+    }
+  }
+
+  private void setIssueComponents(MutableIssue issue, Collection<ProjectComponent> components) {
+    try {
+      final Method setComponentObjects = issue.getClass().getMethod("setComponentObjects", Collection.class);
+      setComponentObjects.invoke(issue, components);
+    } catch (NoSuchMethodException e) {
+      try {
+        final Method setComponents = issue.getClass().getMethod("setComponents", Collection.class);
+        setComponents.invoke(issue, components);
+      } catch (NoSuchMethodException e1) {
+        Throwables.propagate(e1);
+      } catch (InvocationTargetException e1) {
+        Throwables.propagate(e1);
+      } catch (IllegalAccessException e1) {
+        Throwables.propagate(e1);
+      }
+    } catch (InvocationTargetException e) {
+      Throwables.propagate(e);
+    } catch (IllegalAccessException e) {
+      Throwables.propagate(e);
     }
   }
 
