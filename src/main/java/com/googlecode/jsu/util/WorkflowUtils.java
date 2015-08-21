@@ -478,7 +478,7 @@ public class WorkflowUtils {
         }
       } else if (newValue instanceof Collection<?>) {
         if (customField.getCustomFieldType() instanceof MultiUserCFType) {
-          newValue = convertValueToAppUser(newValue);
+          newValue = convertValueToAppUsers(newValue);
         } else if (((customField.getCustomFieldType() instanceof AbstractMultiCFType) ||
           (customField.getCustomFieldType() instanceof MultipleCustomFieldType))) {
           // format already correct
@@ -501,10 +501,7 @@ public class WorkflowUtils {
         newValue = convertValueToAppUser(newValue);
       } else if (cfType instanceof AbstractMultiCFType) {
         if (cfType instanceof MultiUserCFType) {
-          newValue = convertValueToAppUser(newValue);
-        }
-        if (newValue != null) {
-          newValue = asArrayList(newValue);
+          newValue = convertValueToAppUsers(newValue);
         }
       } else if (UserCompatibilityHelper.isUserObject(newValue)) {
         newValue = UserCompatibilityHelper.convertUserObject(newValue).getKey();
@@ -908,16 +905,15 @@ public class WorkflowUtils {
   }
 
   public Object convertValueToAppUser(Object value, boolean evenIfUnknownAndNotJIRA5) {
-    if (value instanceof Collection<?>) {
-      Collection list = new ArrayList(((Collection) value).size());
-      for (Object obj : (Collection) value) {
-        list.add(convertValueToAppUser(obj));
-      }
-      return list;
-    }
-
     if (value == null)
       return null;
+
+    if (value instanceof Collection<?>) {
+      if (((Collection)value).size()==0) {
+        return null;
+      }
+      return convertValueToAppUser(((Collection) value).iterator().next());
+    }
 
     if (value instanceof User)
       return UserCompatibilityHelper.getUserObjectApplicableForUserCF((User) value);
@@ -950,6 +946,25 @@ public class WorkflowUtils {
     }
     if (user != null) {
       return user;
+    }
+    throw new IllegalArgumentException("User '" + value + "' not found.");
+  }
+  public Object convertValueToAppUsers(Object value) {
+    if (value == null)
+      return null;
+
+    if (value instanceof Collection<?>) {
+      Collection list = new ArrayList(((Collection) value).size());
+      for (Object obj : (Collection) value) {
+        list.add(convertValueToAppUser(obj,true));
+      }
+      return list;
+    }
+
+    Object user = convertValueToAppUser(value, true);
+
+    if (user != null) {
+      return Collections.singletonList(user);
     }
     throw new IllegalArgumentException("User '" + value + "' not found.");
   }
