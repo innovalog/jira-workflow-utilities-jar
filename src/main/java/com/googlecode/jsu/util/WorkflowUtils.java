@@ -46,7 +46,9 @@ import com.atlassian.jira.issue.label.LabelManager;
 import com.atlassian.jira.issue.link.IssueLinkManager;
 import com.atlassian.jira.issue.priority.Priority;
 import com.atlassian.jira.issue.resolution.Resolution;
+import com.atlassian.jira.issue.security.IssueSecurityLevel;
 import com.atlassian.jira.issue.security.IssueSecurityLevelManager;
+import com.atlassian.jira.issue.security.IssueSecuritySchemeManager;
 import com.atlassian.jira.issue.status.Status;
 import com.atlassian.jira.issue.util.AggregateTimeTrackingCalculatorFactory;
 import com.atlassian.jira.issue.util.IssueChangeHolder;
@@ -56,6 +58,7 @@ import com.atlassian.jira.project.Project;
 import com.atlassian.jira.project.ProjectManager;
 import com.atlassian.jira.project.version.Version;
 import com.atlassian.jira.project.version.VersionManager;
+import com.atlassian.jira.scheme.Scheme;
 import com.atlassian.jira.security.JiraAuthenticationContext;
 import com.atlassian.jira.user.util.UserManager;
 import com.atlassian.jira.usercompatibility.UserCompatibilityHelper;
@@ -67,7 +70,6 @@ import com.opensymphony.workflow.loader.AbstractDescriptor;
 import com.opensymphony.workflow.loader.ActionDescriptor;
 import com.opensymphony.workflow.loader.FunctionDescriptor;
 import org.apache.commons.lang.StringUtils;
-import org.ofbiz.core.entity.GenericEntityException;
 import org.ofbiz.core.entity.GenericValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,6 +120,7 @@ public class WorkflowUtils {
   private final JiraAuthenticationContext authenticationContext;
   private final CommentManager commentManager;
   private final CustomFieldManager customFieldManager;
+  private final IssueSecuritySchemeManager issueSecuritySchemeManager;
 
   /**
    * @param fieldManager
@@ -135,14 +138,15 @@ public class WorkflowUtils {
    * @param watcherManager
    * @param authenticationContext
    * @param commentManager
-   * @param customFieldManager                          */
+   * @param customFieldManager
+   * @param issueSecuritySchemeManager                                        */
   public WorkflowUtils(
     FieldManager fieldManager, IssueManager issueManager,
     ProjectComponentManager projectComponentManager, VersionManager versionManager,
     IssueSecurityLevelManager issueSecurityLevelManager, ApplicationProperties applicationProperties,
     FieldCollectionsUtils fieldCollectionsUtils, IssueLinkManager issueLinkManager,
     UserManager userManager, CrowdService crowdService, OptionsManager optionsManager,
-    ProjectManager projectManager, LabelManager labelManager, AggregateTimeTrackingCalculatorFactory aggregateTimeTrackingCalculatorFactory, ConstantsManager constantsManager, BuildUtilsInfo buildUtilsInfo, WatcherManager watcherManager, JiraAuthenticationContext authenticationContext, CommentManager commentManager, CustomFieldManager customFieldManager) {
+    ProjectManager projectManager, LabelManager labelManager, AggregateTimeTrackingCalculatorFactory aggregateTimeTrackingCalculatorFactory, ConstantsManager constantsManager, BuildUtilsInfo buildUtilsInfo, WatcherManager watcherManager, JiraAuthenticationContext authenticationContext, CommentManager commentManager, CustomFieldManager customFieldManager, IssueSecuritySchemeManager issueSecuritySchemeManager) {
     this.fieldManager = fieldManager;
     this.issueManager = issueManager;
     this.projectComponentManager = projectComponentManager;
@@ -163,6 +167,7 @@ public class WorkflowUtils {
     this.authenticationContext = authenticationContext;
     this.commentManager = commentManager;
     this.customFieldManager = customFieldManager;
+    this.issueSecuritySchemeManager = issueSecuritySchemeManager;
   }
 
   /**
@@ -684,28 +689,31 @@ public class WorkflowUtils {
         } else if (value instanceof Long) {
           issue.setSecurityLevelId((Long) value);
         } else {
-          Collection<GenericValue> levels;
-
           try {
             Long l = Long.decode(value.toString());
             issue.setSecurityLevelId(l);
           } catch (NumberFormatException ignore) {
             //try looking for the security level name instead
-            try {
-              levels = issueSecurityLevelManager.getSecurityLevelsByName(value.toString());
-            } catch (GenericEntityException e) {
-              throw new IllegalArgumentException("Unable to find security level \"" + value + "\"");
-            }
-
+            Collection<IssueSecurityLevel> levels = issueSecurityLevelManager.getIssueSecurityLevelsByName(value.toString());
             if (levels == null || levels.size() == 0) {
               throw new IllegalArgumentException("Unable to find security level \"" + value + "\"");
             }
 
-            if (levels.size() > 1) {
-              throw new IllegalArgumentException("More that one security level with name \"" + value + "\"");
+            final Scheme scheme = issueSecuritySchemeManager.getSchemeFor(issue.getProjectObject()); //security scheme for the current project
+            if (scheme==null)
+              throw new IllegalArgumentException("No Issue Security Scheme is applicable to project \"" + issue.getProjectObject().getKey() + "\".");
+            Long newLevel = null;
+            for (IssueSecurityLevel securityLevel : levels) {
+              if (securityLevel.getSchemeId().equals(scheme.getId())) {
+                newLevel = securityLevel.getId();
+                break;
+              }
+            }
+            if (newLevel==null) {
+              throw new IllegalArgumentException("Security level \"" + value + "\" is not applicable to the current issue.");
             }
 
-            issue.setSecurityLevel(levels.iterator().next());
+            issue.setSecurityLevelId(newLevel);
           }
         }
       } else if (fieldId.equals(IssueFieldConstants.ASSIGNEE)) {
