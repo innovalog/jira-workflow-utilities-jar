@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.innovalog</groupId>
+  <artifactId>workflow_utils</artifactId>
+  <name>Jira Workflow Utilities</name>
+  <version>1.42.jira7</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <jira.version>7.0.0-m01</jira.version>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+  </properties>
+
+  <developers>
+    <developer>
+      <name>David Fischer</name>
+      <organization>Innovalog</organization>
+    </developer>
+  </developers>
+
+  <organization>
+    <name>Innovalog</name>
+    <url>http://www.innovalog.com</url>
+  </organization>
+  <scm>
+    <connection>scm:git:git://github.com/innovalog/jira-workflow-utilities-jar.git</connection>
+    <developerConnection>scm:git:https://github.com/innovalog/jira-workflow-utilities-jar.git</developerConnection>
+    <tag>workflow_utils-1.42.jira7</tag>
+  </scm>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.7</source>
+          <target>1.7</target>
+        </configuration>
+      </plugin>
+      <plugin>
+      	<groupId>org.apache.maven.plugins</groupId>
+      	<artifactId>maven-release-plugin</artifactId>
+      	<version>2.5.2</version>
+      </plugin>
+    </plugins>
+    <extensions>
+      <extension>
+        <groupId>ar.com.synergian</groupId>
+            <artifactId>wagon-git</artifactId>
+            <version>0.2.4</version>
+      </extension>
+    </extensions>
+  </build>
+  <dependencies>
+    <dependency>
+      <groupId>com.atlassian.jira</groupId>
+      <artifactId>jira-core</artifactId>
+      <version>${jira.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>[1.5.0,1.9.9]</version>
+        <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.atlassian.usercompatibility</groupId>
+      <artifactId>usercompatibility-jira</artifactId>
+      <version>0.18</version>
+    </dependency>
+  </dependencies>
+  <repositories>
+    <repository>
+      <id>atlassian</id>
+      <url>https://maven.atlassian.com/repository/public</url>
+    </repository>
+    <repository>
+      <id>synergian-repo</id>
+      <url>https://raw.github.com/synergian/wagon-git/releases</url>
+    </repository>
+  </repositories>
+  <distributionManagement>
+    <snapshotRepository>
+      <id>github-jwu-snapshots</id>
+      <name>jira-workflow-utilities-jar</name>
+      <url>git:snapshots://git@innovalog-github.com:innovalog/jira-workflow-utilities-jar.git</url>
+    </snapshotRepository>
+    <repository>
+     <id>github-jwu</id>
+     <name>jira-workflow-utilities-jar</name>
+     <url>git:releases://git@innovalog-github.com:innovalog/jira-workflow-utilities-jar.git</url>
+   </repository>
+  </distributionManagement>
+  <pluginRepositories>
+    <pluginRepository>
+      <id>synergian-repo</id>
+      <url>https://raw.github.com/synergian/wagon-git/releases</url>
+    </pluginRepository>
+  </pluginRepositories>
+
+</project>
