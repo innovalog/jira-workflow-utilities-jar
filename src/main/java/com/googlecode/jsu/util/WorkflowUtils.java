@@ -867,7 +867,10 @@ public class WorkflowUtils {
     } else if (value instanceof Collection) {
       if (((Collection)value).isEmpty())
         return Collections.emptySet();
-      return (Collection)componentConverter.convertToComponents((Collection<GenericValue>) value);
+      List<ProjectComponent> components = new ArrayList<>(((Collection)value).size());
+      for (Object v : (Collection)value)
+        components.add(projectComponentManager.findByComponentName(issue.getProjectObject().getId(), convertToString(v)));
+      return components;
     } else {
       ProjectComponent v = projectComponentManager.findByComponentName(
         issue.getProjectObject().getId(), convertToString(value)
@@ -888,7 +891,7 @@ public class WorkflowUtils {
     } else if (value instanceof Collection) {
       List<Version> versions = new ArrayList<Version>(((Collection)value).size());
       for (Object v : (Collection)value)
-        versions.add(adaptVersionToProject((Version) v, issue.getProjectObject()));
+        versions.add(versionManager.getVersion(issue.getProjectObject().getId(), convertToString(v)));
       return versions;
     } else {
       Version v = versionManager.getVersion(issue.getProjectObject().getId(), convertToString(value));
