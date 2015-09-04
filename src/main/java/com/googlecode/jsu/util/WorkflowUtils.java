@@ -816,7 +816,7 @@ public class WorkflowUtils {
       setComponentObjects.invoke(issue, components);
     } catch (NoSuchMethodException e) {
       try {
-        final Method setComponents = issue.getClass().getMethod("setComponents", Collection.class);
+        final Method setComponents = issue.getClass().getMethod("setComponent", Collection.class);
         setComponents.invoke(issue, components);
       } catch (NoSuchMethodException e1) {
         Throwables.propagate(e1);
