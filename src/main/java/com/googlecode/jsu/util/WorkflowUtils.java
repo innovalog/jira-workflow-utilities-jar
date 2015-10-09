@@ -746,7 +746,7 @@ public class WorkflowUtils {
           }
         }
       } else if (fieldId.equals(IssueFieldConstants.REPORTER)) {
-        ApplicationUser user = (ApplicationUser) convertValueToUser(value);
+        ApplicationUser user = (ApplicationUser) convertValueToAppUser(value);
         issue.setReporterId(user==null?null:user.getKey());
       } else if (fieldId.equals(IssueFieldConstants.SUMMARY)) {
         if ((value == null) || (value instanceof String)) {
