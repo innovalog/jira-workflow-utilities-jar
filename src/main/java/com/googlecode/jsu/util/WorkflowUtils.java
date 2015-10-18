@@ -369,9 +369,9 @@ public class WorkflowUtils {
         } else if (fieldId.equals(IssueFieldConstants.AGGREGATE_TIME_ORIGINAL_ESTIMATE)) {
           retVal = aggregateTimeTrackingCalculatorFactory.getCalculator(issue).getAggregates(issue).getOriginalEstimate();
         } else if (fieldId.equals(IssueFieldConstants.ASSIGNEE)) {
-          retVal = issue.getAssigneeUser();
+          retVal = issue.getClass().getMethod("getAssigneeUser").invoke(issue);
         } else if (fieldId.equals(IssueFieldConstants.REPORTER)) {
-          retVal = issue.getReporterUser();
+          retVal = issue.getClass().getMethod("getReporterUser").invoke(issue);
         } else if (fieldId.equals(IssueFieldConstants.DESCRIPTION)) {
           retVal = issue.getDescription();
         } else if (fieldId.equals(IssueFieldConstants.ENVIRONMENT)) {
@@ -403,6 +403,15 @@ public class WorkflowUtils {
     } catch (NullPointerException e) {
       retVal = null;
 
+      log.error("Unable to get field \"" + field.getId() + "\" value", e);
+    } catch (InvocationTargetException e) {
+      retVal = null;
+      log.error("Unable to get field \"" + field.getId() + "\" value", e);
+    } catch (NoSuchMethodException e) {
+      retVal = null;
+      log.error("Unable to get field \"" + field.getId() + "\" value", e);
+    } catch (IllegalAccessException e) {
+      retVal = null;
       log.error("Unable to get field \"" + field.getId() + "\" value", e);
     }
 
