@@ -772,12 +772,12 @@ public class WorkflowUtils {
       } else if (fieldId.equals(IssueFieldConstants.WATCHES)) { //this is the watchers field
         if (value instanceof Collection) {
           for (Object v : ((Collection)value)) {
-            ApplicationUser u = (ApplicationUser) convertValueToUser(v);
+            ApplicationUser u = (ApplicationUser) convertValueToAppUser(v);
             if (u != null && !watcherManager.isWatching(u,issue))
               watcherManager.startWatching(u,issue);
           }
         } else {
-          ApplicationUser u = (ApplicationUser) convertValueToUser(value);
+          ApplicationUser u = (ApplicationUser) convertValueToAppUser(value);
           if (u != null && !watcherManager.isWatching(u,issue))
             watcherManager.startWatching(u,issue);
         }
