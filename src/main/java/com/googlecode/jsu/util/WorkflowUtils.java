@@ -309,7 +309,7 @@ public class WorkflowUtils {
           }
         } else if (fieldId.equals(IssueFieldConstants.COMMENT)) {
           // return a list with the comments of a given issue.
-          retCollection = commentManager.getComments(issue);
+          retVal = commentManager.getComments(issue);
         } else if (fieldId.equals(IssueFieldConstants.COMPONENTS)) {
           retCollection = issue.getComponentObjects();
 
