@@ -773,13 +773,13 @@ public class WorkflowUtils {
         if (value instanceof Collection) {
           for (Object v : ((Collection)value)) {
             ApplicationUser u = (ApplicationUser) convertValueToAppUser(v);
-            if (u != null && !watcherManager.isWatching(u,issue))
-              watcherManager.startWatching(u,issue);
+            if (u != null && !watcherManager.isWatching(u, issue))
+              startWatching(issue, u);
           }
         } else {
           ApplicationUser u = (ApplicationUser) convertValueToAppUser(value);
           if (u != null && !watcherManager.isWatching(u,issue))
-            watcherManager.startWatching(u,issue);
+            startWatching(issue, u);
         }
       } else if (fieldId.equals(IssueFieldConstants.LABELS)) {
         if ((value == null) || (value instanceof Set)) {
@@ -816,6 +816,15 @@ public class WorkflowUtils {
       } else {
         log.error("Issue field \"" + fieldId + "\" is not supported for setting.");
       }
+    }
+  }
+
+  private void startWatching(MutableIssue issue, ApplicationUser u) {
+    try {
+      Method startWatching = WatcherManager.class.getMethod("startWatching", ApplicationUser.class, Issue.class);
+      startWatching.invoke(watcherManager, u, issue);
+    } catch (ReflectiveOperationException e) {
+      Throwables.propagate(e);
     }
   }
 
