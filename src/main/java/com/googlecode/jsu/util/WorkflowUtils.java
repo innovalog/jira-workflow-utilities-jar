@@ -470,7 +470,11 @@ public class WorkflowUtils {
       if (cfType instanceof VersionCFType) {
         newValue = convertValueToVersions(issue, newValue);
       } else if (cfType instanceof ProjectCFType) {
-        newValue = convertValueToProject(newValue);
+        Project project = convertValueToProject(newValue);
+        if (project != null && buildUtilsInfo.getVersionNumbers()[0] < 7)
+          newValue = project.getGenericValue();
+        else
+          newValue = project;
       } else if (newValue instanceof String) {
         if (cfType instanceof MultipleSettableCustomFieldType) {
           Option option = convertStringToOption(issue, customField, (String) newValue);
