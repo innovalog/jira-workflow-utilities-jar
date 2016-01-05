@@ -480,12 +480,18 @@ public class WorkflowUtils {
         if (customField.getCustomFieldType() instanceof MultiUserCFType) {
           newValue = convertValueToAppUser(newValue);
         } else if (((customField.getCustomFieldType() instanceof AbstractMultiCFType) ||
-          (customField.getCustomFieldType() instanceof MultipleCustomFieldType))) {
+            (customField.getCustomFieldType() instanceof MultipleCustomFieldType))) {
           // format already correct
         } else if (customField.getCustomFieldType() instanceof LabelsCFType) {
           if (!(newValue instanceof Set)) {
             newValue = new HashSet((Collection) newValue);
           }
+        } else if (cfType.getClass().getPackage().getName().equals("com.valiantys.jira.plugins.sql.customfield")) {
+          CustomFieldParams fieldParams = new CustomFieldParamsImpl(
+              customField,
+              newValue
+          );
+          newValue = cfType.getValueFromCustomFieldParams(fieldParams);
         } else {
           //convert from string to Object
           CustomFieldParams fieldParams = new CustomFieldParamsImpl(
