@@ -196,6 +196,8 @@ public class WorkflowUtils {
       if (fields != null) {
         if (fields.size() > 1)
           throw new IllegalArgumentException("More than one custom fields were found named '" + key + "'. Use the 'customfield_xxxxx' form instead.");
+        else if (fields.size()==0)
+          throw new IllegalArgumentException("Unable to find field named '" + key + "'");
         else
           field = fields.iterator().next();
       }
