@@ -27,6 +27,10 @@ public class NameComparatorEx implements Comparator<Field> {
         String name1 = i18nHelper.getText(o1.getName());
         String name2 = i18nHelper.getText(o2.getName());
 
-        return name1.compareTo(name2);
+        int result = name1.compareTo(name2);
+        if (result == 0)
+            return o1.getId().compareTo(o2.getId());
+        else
+            return result;
     }
 }
