@@ -36,441 +36,444 @@ import static com.atlassian.jira.issue.IssueFieldConstants.*;
  * @version $Id$
  */
 public class FieldCollectionsUtils {
-    private static final Logger log = LoggerFactory.getLogger(FieldCollectionsUtils.class);
+  private static final Logger log = LoggerFactory.getLogger(FieldCollectionsUtils.class);
 
-    private static final Collection<String> TIME_TRACKING_FIELDS = Arrays.asList(
-            IssueFieldConstants.TIME_ESTIMATE,
-            IssueFieldConstants.TIME_ORIGINAL_ESTIMATE,
-            IssueFieldConstants.TIME_SPENT,
-            IssueFieldConstants.TIMETRACKING,
-            IssueFieldConstants.WORKLOG
+  private static final Collection<String> TIME_TRACKING_FIELDS = Arrays.asList(
+      IssueFieldConstants.TIME_ESTIMATE,
+      IssueFieldConstants.TIME_ORIGINAL_ESTIMATE,
+      IssueFieldConstants.TIME_SPENT,
+      IssueFieldConstants.TIMETRACKING,
+      IssueFieldConstants.WORKLOG
+  );
+
+  private final I18nHelper.BeanFactory i18nHelper;
+  private final ApplicationProperties applicationProperties;
+  private final DateTimeFormatter dateTimeFormatter;
+  private final FieldManager fieldManager;
+  private final FieldLayoutManager fieldLayoutManager;
+  private final CustomFieldManager customFieldManager;
+  private final FieldVisibilityManager fieldVisibilityManager;
+
+  /**
+   * @param i18nHelper
+   * @param applicationProperties
+   * @param fieldManager
+   * @param fieldLayoutManager
+   * @param customFieldManager
+   * @param fieldVisibilityManager
+   */
+  public FieldCollectionsUtils(
+      BeanFactory i18nHelper, ApplicationProperties applicationProperties,
+      FieldManager fieldManager,
+      FieldLayoutManager fieldLayoutManager,
+      CustomFieldManager customFieldManager,
+      FieldVisibilityManager fieldVisibilityManager
+  ) {
+    this.i18nHelper = i18nHelper;
+    this.applicationProperties = applicationProperties;
+    this.dateTimeFormatter = ComponentManager.getComponent(DateTimeFormatter.class);
+    this.fieldManager = fieldManager;
+    this.fieldLayoutManager = fieldLayoutManager;
+    this.customFieldManager = customFieldManager;
+    this.fieldVisibilityManager = fieldVisibilityManager;
+  }
+
+  /**
+   * @return a complete list of fields, including custom fields.
+   */
+  public List<Field> getAllFields() {
+    Set<Field> allFieldsSet = new TreeSet<Field>(getComparator());
+
+    allFieldsSet.addAll(fieldManager.getOrderableFields());
+
+    try {
+      allFieldsSet.addAll(fieldManager.getAllAvailableNavigableFields());
+    } catch (FieldException e) {
+      log.error("Unable to load navigable fields", e);
+    }
+
+    return new ArrayList<Field>(allFieldsSet);
+  }
+
+  /**
+   * @return a list of fields, including custom fields, which could be modified.
+   */
+  public List<Field> getAllEditableFields() {
+    Set<Field> allFields = new TreeSet<Field>(getComparator());
+
+    try {
+      final Set<NavigableField> fields = fieldManager.getAllAvailableNavigableFields();
+
+      for (Field f : fields) {
+        allFields.add(f);
+      }
+    } catch (FieldException e) {
+      log.error("Unable to load navigable fields", e);
+    }
+
+    return new ArrayList<Field>(allFields);
+  }
+
+  public List<Field> getAllMultiEditableFields() {
+    Set<Field> allFields = new TreeSet<Field>(getComparator());
+
+    try {
+      final Set<NavigableField> fields = fieldManager.getAllAvailableNavigableFields();
+      allFields.addAll(getMultiSystemFields());
+      for (Field f : fields) {
+        if (fieldManager.isCustomField(f) && customFieldManager.getCustomFieldObject(f.getId()).getCustomFieldType() instanceof AbstractMultiCFType)
+          allFields.add(f);
+      }
+    } catch (FieldException e) {
+      log.error("Unable to load navigable fields", e);
+    }
+
+    return new ArrayList<Field>(allFields);
+  }
+
+
+  /**
+   * @param allFields list of fields to be sorted.
+   * @return a list with fields sorted by name.
+   */
+  public List<Field> sortFields(List<Field> allFields) {
+    Collections.sort(allFields, getComparator());
+
+    return allFields;
+  }
+
+  /**
+   * @return a list of all fields of type date and datetime.
+   */
+  public List<Field> getAllDateFields() {
+    List<Field> allDateFields = new ArrayList<Field>();
+
+    List<CustomField> fields = customFieldManager.getCustomFieldObjects();
+
+    for (CustomField cfDate : fields) {
+      CustomFieldType customFieldType = cfDate.getCustomFieldType();
+
+      if ((customFieldType instanceof DateCFType) || (customFieldType instanceof DateTimeCFType)) {
+        allDateFields.add(cfDate);
+      }
+    }
+    allDateFields.addAll(
+        Arrays.asList(
+            fieldManager.getField(IssueFieldConstants.DUE_DATE),
+            fieldManager.getField(IssueFieldConstants.CREATED),
+            fieldManager.getField(IssueFieldConstants.UPDATED),
+            fieldManager.getField(IssueFieldConstants.RESOLUTION_DATE)));
+
+    return sortFields(allDateFields);
+  }
+
+  /**
+   * @param issue:      issue to which the field belongs
+   * @param field       wished field
+   * @param fieldScreen wished screen
+   * @return if a field is displayed in a screen.
+   */
+  public boolean isFieldOnScreen(Issue issue, Field field, FieldScreen fieldScreen) {
+    if (IssueFieldConstants.COMMENT.equals(field.getId())) { //Always present but cannot be detected.
+      return true;
+    }
+    if (fieldManager.isCustomField(field)) {
+      CustomFieldType type = ((CustomField) field).getCustomFieldType();
+
+      if ((type instanceof ReadOnlyCFType) ||
+          (type instanceof ImportIdLinkCFType)) {
+        return false;
+      }
+    }
+
+    boolean retVal = false;
+    Iterator<FieldScreenTab> itTabs = fieldScreen.getTabs().iterator();
+
+    while (itTabs.hasNext() && !retVal) {
+      FieldScreenTab tab = itTabs.next();
+      Iterator<FieldScreenLayoutItem> itFields = tab.getFieldScreenLayoutItems().iterator();
+
+      while (itFields.hasNext() && !retVal) {
+        FieldScreenLayoutItem fieldScreenLayoutItem = itFields.next();
+
+        if ((field.getId().equals(fieldScreenLayoutItem.getFieldId()) && isIssueHasField(issue, field)) ||
+            (TIME_TRACKING_FIELDS.contains(field.getId()) && TIME_TRACKING_FIELDS.contains(fieldScreenLayoutItem.getFieldId())) //time tracking fields are not really clear...
+            ) {
+          retVal = true;
+        }
+      }
+    }
+
+    return retVal;
+  }
+
+  /*
+  It's not possible to put a validation message on a timetracking field.
+   */
+  public boolean cannotSetValidationMessageToField(Field field) {
+    return TIME_TRACKING_FIELDS.contains(field.getId());
+  }
+
+  /**
+   * Check is the issue has the field.
+   *
+   * @param issue: issue to which the field belongs
+   * @param field: wished field
+   * @return if a field is available.
+   */
+  public boolean isIssueHasField(Issue issue, Field field) {
+    final String fieldId = field.getId();
+
+    boolean isHidden = false;
+
+    if (TIME_TRACKING_FIELDS.contains(fieldId)) {
+      isHidden = !fieldManager.isTimeTrackingOn();
+    } else {
+      isHidden = fieldVisibilityManager.isFieldHidden(field.getId(), issue);
+    }
+
+    if (isHidden) {
+      // Looks like we found hidden field
+      return false;
+    }
+
+    if (fieldManager.isCustomField(field)) {
+      CustomField customField = (CustomField) field;
+      FieldConfig config = customField.getRelevantConfig(issue);
+
+      return (config != null);
+    }
+
+    return true;
+  }
+
+  public FieldLayoutItem getFieldLayoutItem(Issue issue, Field field) {
+    FieldLayout layout = fieldLayoutManager.getFieldLayout(
+        issue.getProjectObject(),
+        issue.getIssueTypeObject().getId()
     );
 
-    private final I18nHelper.BeanFactory i18nHelper;
-    private final ApplicationProperties applicationProperties;
-    private final DateTimeFormatter dateTimeFormatter;
-    private final FieldManager fieldManager;
-    private final FieldLayoutManager fieldLayoutManager;
-    private final CustomFieldManager customFieldManager;
-    private final FieldVisibilityManager fieldVisibilityManager;
-
-    /**
-     * @param i18nHelper
-     * @param applicationProperties
-     * @param fieldManager
-     * @param fieldLayoutManager
-     * @param customFieldManager
-     * @param fieldVisibilityManager
-     */
-    public FieldCollectionsUtils(
-            BeanFactory i18nHelper, ApplicationProperties applicationProperties,
-            FieldManager fieldManager,
-            FieldLayoutManager fieldLayoutManager,
-            CustomFieldManager customFieldManager,
-            FieldVisibilityManager fieldVisibilityManager
-    ) {
-        this.i18nHelper = i18nHelper;
-        this.applicationProperties = applicationProperties;
-        this.dateTimeFormatter = ComponentManager.getComponent(DateTimeFormatter.class);
-        this.fieldManager = fieldManager;
-        this.fieldLayoutManager = fieldLayoutManager;
-        this.customFieldManager = customFieldManager;
-        this.fieldVisibilityManager = fieldVisibilityManager;
+    if (layout.getId() == null) {
+      layout = fieldLayoutManager.getEditableDefaultFieldLayout();
     }
 
-    /**
-     * @return a complete list of fields, including custom fields.
-     */
-    public List<Field> getAllFields() {
-        Set<Field> allFieldsSet = new TreeSet<Field>(getComparator());
+    return layout.getFieldLayoutItem(field.getId());
+  }
 
-        allFieldsSet.addAll(fieldManager.getOrderableFields());
+  /**
+   * @param issue: issue to which the field belongs
+   * @param field: wished field
+   * @return if a field is required.
+   */
+  public boolean isFieldRequired(Issue issue, Field field) {
+    boolean retVal = false;
+    FieldLayoutItem fieldLayoutItem = getFieldLayoutItem(issue, field);
 
-        try {
-            allFieldsSet.addAll(fieldManager.getAllAvailableNavigableFields());
-        } catch (FieldException e) {
-            log.error("Unable to load navigable fields", e);
-        }
-
-        return new ArrayList<Field>(allFieldsSet);
+    if (fieldLayoutItem != null) {
+      retVal = fieldLayoutItem.isRequired();
     }
+    return retVal;
+  }
 
-    /**
-     * @return a list of fields, including custom fields, which could be modified.
-     */
-    public List<Field> getAllEditableFields(){
-        Set<Field> allFields = new TreeSet<Field>(getComparator());
+  /**
+   * @return a list of fields that could be chosen to copy their value.
+   */
+  public List<Field> getCopyFromFields() {
+    List<Field> allFields = getAllFields();
 
-        try {
-            final Set<NavigableField> fields = fieldManager.getAllAvailableNavigableFields();
+    allFields.removeAll(getNonCopyFromFields());
 
-            for (Field f : fields) {
-              allFields.add(f);
-            }
-        } catch (FieldException e) {
-            log.error("Unable to load navigable fields", e);
-        }
+    return allFields;
+  }
 
-        return new ArrayList<Field>(allFields);
-    }
+  /**
+   * @return a list of fields that will be eliminated from getCopyFromFields().
+   */
+  private List<Field> getNonCopyFromFields() {
+    return asFields(
+        ATTACHMENT,
+        COMMENT,
+        //COMPONENTS,
+        ISSUE_LINKS,
+        SUBTASKS,
+        THUMBNAIL,
+        TIMETRACKING
+    );
+  }
 
-    public List<Field> getAllMultiEditableFields(){
-        Set<Field> allFields = new TreeSet<Field>(getComparator());
+  private List<Field> getMultiSystemFields() {
+    return asFields(
+        AFFECTED_VERSIONS,
+        COMPONENTS,
+        FIX_FOR_VERSIONS,
+        ISSUE_LINKS,
+        SUBTASKS,
+        LABELS,
+        VOTES,
+        WATCHES
+    );
+  }
 
-        try {
-            final Set<NavigableField> fields = fieldManager.getAllAvailableNavigableFields();
-            allFields.addAll(getMultiSystemFields());
-            for (Field f : fields) {
-                if (fieldManager.isCustomField(f) && customFieldManager.getCustomFieldObject(f.getId()).getCustomFieldType() instanceof AbstractMultiCFType)
-                    allFields.add(f);
-            }
-        } catch (FieldException e) {
-            log.error("Unable to load navigable fields", e);
-        }
+  /**
+   * @return a list of fields that could be chosen to copy their value.
+   */
+  public List<Field> getCopyToFields() {
+    List<Field> allFields = getAllFields();
+    allFields.removeAll(getNonCopyToFields());
 
-        return new ArrayList<Field>(allFields);
-    }
+    return allFields;
+  }
 
+  public List<Field> getCopyToMultiFields() {
+    List<Field> allFields = getAllMultiEditableFields();
+    allFields.removeAll(getNonCopyToFields());
 
+    return allFields;
+  }
 
-    /**
-     * @param allFields list of fields to be sorted.
-     * @return a list with fields sorted by name.
-     */
-    public List<Field> sortFields(List<Field> allFields) {
-        Collections.sort(allFields, getComparator());
-
-        return allFields;
-    }
-
-    /**
-     * @return a list of all fields of type date and datetime.
-     */
-    public List<Field> getAllDateFields() {
-        List<Field> allDateFields = new ArrayList<Field>();
-
-        List<CustomField> fields = customFieldManager.getCustomFieldObjects();
-
-        for (CustomField cfDate : fields) {
-            CustomFieldType customFieldType = cfDate.getCustomFieldType();
-
-            if ((customFieldType instanceof DateCFType) || (customFieldType instanceof DateTimeCFType)){
-                allDateFields.add(cfDate);
-            }
-        }
-        allDateFields.addAll(
-                Arrays.asList(
-                        fieldManager.getField(IssueFieldConstants.DUE_DATE),
-                        fieldManager.getField(IssueFieldConstants.CREATED),
-                        fieldManager.getField(IssueFieldConstants.UPDATED),
-                        fieldManager.getField(IssueFieldConstants.RESOLUTION_DATE)));
-
-        return sortFields(allDateFields);
-    }
-
-    /**
-     * @param issue: issue to which the field belongs
-     * @param field wished field
-     * @param fieldScreen wished screen
-     * @return if a field is displayed in a screen.
-     */
-    public boolean isFieldOnScreen(Issue issue, Field field, FieldScreen fieldScreen){
-        if (IssueFieldConstants.COMMENT.equals(field.getId())) { //Always present but cannot be detected.
-            return true;
-        }
-        if (fieldManager.isCustomField(field)) {
-            CustomFieldType type = ((CustomField) field).getCustomFieldType();
-
-            if ((type instanceof ReadOnlyCFType) ||
-                    (type instanceof ImportIdLinkCFType)) {
-                return false;
-            }
-        }
-
-        boolean retVal = false;
-        Iterator<FieldScreenTab> itTabs = fieldScreen.getTabs().iterator();
-
-        while(itTabs.hasNext() && !retVal){
-            FieldScreenTab tab = itTabs.next();
-            Iterator<FieldScreenLayoutItem> itFields = tab.getFieldScreenLayoutItems().iterator();
-
-            while(itFields.hasNext() && !retVal){
-                FieldScreenLayoutItem fieldScreenLayoutItem = itFields.next();
-
-                if ( (field.getId().equals(fieldScreenLayoutItem.getFieldId()) && isIssueHasField(issue, field)) ||
-                     (TIME_TRACKING_FIELDS.contains(field.getId()) && TIME_TRACKING_FIELDS.contains(fieldScreenLayoutItem.getFieldId()) ) //time tracking fields are not really clear...
-                   ) {
-                    retVal = true;
-                }
-            }
-        }
-
-        return retVal;
-    }
-
-    /*
-    It's not possible to put a validation message on a timetracking field.
-     */
-    public boolean cannotSetValidationMessageToField(Field field) {
-        return TIME_TRACKING_FIELDS.contains(field.getId());
-    }
-
-    /**
-     * Check is the issue has the field.
-     *
-     * @param issue: issue to which the field belongs
-     * @param field: wished field
-     * @return if a field is available.
-     */
-    public boolean isIssueHasField(Issue issue, Field field) {
-        final String fieldId = field.getId();
-
-        boolean isHidden = false;
-
-        if (TIME_TRACKING_FIELDS.contains(fieldId)) {
-            isHidden = !fieldManager.isTimeTrackingOn();
-        } else {
-            isHidden = fieldVisibilityManager.isFieldHidden(field.getId(), issue);
-        }
-
-        if (isHidden) {
-            // Looks like we found hidden field
-            return false;
-        }
-
-        if (fieldManager.isCustomField(field)) {
-            CustomField customField = (CustomField) field;
-            FieldConfig config = customField.getRelevantConfig(issue);
-
-            return (config != null);
-        }
-
-        return true;
-    }
-
-    public FieldLayoutItem getFieldLayoutItem(Issue issue, Field field) {
-                FieldLayout layout = fieldLayoutManager.getFieldLayout(
-                issue.getProjectObject(),
-                issue.getIssueTypeObject().getId()
+  /**
+   * @return a list of fields that will be eliminated from getCopyToFields().
+   */
+  private List<Field> getNonCopyToFields() {
+    return asFields(
+        ATTACHMENT,
+        COMMENT,
+        CREATED,
+        TIMETRACKING,
+        AGGREGATE_TIME_ORIGINAL_ESTIMATE,
+        AGGREGATE_TIME_ESTIMATE,
+        AGGREGATE_PROGRESS,
+        AGGREGATE_TIME_SPENT,
+        ISSUE_KEY,
+        ISSUE_LINKS,
+        PROJECT,
+        STATUS,
+        SUBTASKS,
+        THUMBNAIL,
+        UPDATED,
+        VOTES,
+        WORKRATIO,
+        RESOLUTION_DATE,
+        PROGRESS,
+        WORKLOG,
+        LAST_VIEWED,
+        CREATOR
         );
+  }
 
-        if (layout.getId() == null) {
-            layout = fieldLayoutManager.getEditableDefaultFieldLayout();
-        }
+  /**
+   * @return a list of fields that could be chosen like required.
+   */
+  public List<Field> getRequirableFields() {
+    List<Field> allFields = getAllFields();
 
-        return layout.getFieldLayoutItem(field.getId());
+    allFields.removeAll(getNonRequirableFields());
+
+    return allFields;
+  }
+
+  /**
+   * @return a list of fields that will be eliminated from getRequirableFields().
+   */
+  private List<Field> getNonRequirableFields() {
+    return asFields(
+        CREATED,
+        TIMETRACKING,
+        PROGRESS,
+        AGGREGATE_TIME_ORIGINAL_ESTIMATE,
+        AGGREGATE_PROGRESS,
+        ISSUE_KEY,
+        ISSUE_LINKS,
+        ISSUE_TYPE,
+        PROJECT,
+        STATUS,
+        SUBTASKS,
+        THUMBNAIL,
+        UPDATED,
+        VOTES,
+        WORKRATIO,
+        "worklog",
+        "aggregatetimeestimate",
+        "aggregatetimespent"
+    );
+  }
+
+  /**
+   * @return a list of fields that could be chosen in Value-Field Condition.
+   */
+  public List<Field> getValueFieldConditionFields() {
+    List<Field> allFields = getAllFields();
+
+    allFields.removeAll(getNonValueFieldConditionFields());
+    // Date fields are removed, because date comparison is not implemented yet. - See also ConditionCheckerFactory.
+    allFields.removeAll(getAllDateFields());
+
+    return allFields;
+  }
+
+  /**
+   * @return a list of fields that will be eliminated from getValueFieldConditionFields().
+   */
+  private List<Field> getNonValueFieldConditionFields() {
+    return asFields(
+        ATTACHMENT,
+        COMMENT,
+        CREATED,
+        ISSUE_KEY,
+        ISSUE_LINKS,
+        SUBTASKS,
+        THUMBNAIL,
+        TIMETRACKING,
+        UPDATED,
+        WORKRATIO
+    );
+  }
+
+  /**
+   * @param cal Clear the time part from a given Calendar.
+   */
+  public void clearCalendarTimePart(Calendar cal) {
+    cal.set(Calendar.HOUR_OF_DAY, 0);
+    cal.set(Calendar.MINUTE, 0);
+    cal.set(Calendar.SECOND, 0);
+    cal.set(Calendar.MILLISECOND, 0);
+  }
+
+  /**
+   * @param tsDate
+   * @return a String.
+   * <p>
+   * It formats to a date nice.
+   */
+  public String getNiceDate(Timestamp tsDate) {
+    Date timePerformed = new Date(tsDate.getTime());
+    return dateTimeFormatter.format(timePerformed);
+  }
+
+  /**
+   * Get comparator for sorting fields.
+   *
+   * @return
+   */
+  private Comparator<Field> getComparator() {
+    I18nHelper i18n = i18nHelper.getInstance(applicationProperties.getDefaultLocale());
+
+    return new NameComparatorEx(i18n);
+  }
+
+  /**
+   * Convert array of names into list of fields
+   *
+   * @param names
+   * @return
+   */
+  private List<Field> asFields(String... names) {
+    List<Field> result = new ArrayList<Field>(names.length);
+
+    for (String name : names) {
+      result.add(fieldManager.getField(name));
     }
 
-    /**
-     * @param issue: issue to which the field belongs
-     * @param field: wished field
-     * @return if a field is required.
-     */
-    public boolean isFieldRequired(Issue issue, Field field) {
-        boolean retVal = false;
-        FieldLayoutItem fieldLayoutItem = getFieldLayoutItem(issue, field);
-
-        if (fieldLayoutItem != null) {
-            retVal = fieldLayoutItem.isRequired();
-        }
-        return retVal;
-    }
-
-    /**
-     * @return a list of fields that could be chosen to copy their value.
-     */
-    public List<Field> getCopyFromFields(){
-        List<Field> allFields = getAllFields();
-
-        allFields.removeAll(getNonCopyFromFields());
-
-        return allFields;
-    }
-
-    /**
-     * @return a list of fields that will be eliminated from getCopyFromFields().
-     */
-    private List<Field> getNonCopyFromFields(){
-        return asFields(
-                ATTACHMENT,
-                COMMENT,
-                //COMPONENTS,
-                ISSUE_LINKS,
-                SUBTASKS,
-                THUMBNAIL,
-                TIMETRACKING
-        );
-    }
-
-    private List<Field> getMultiSystemFields(){
-        return asFields(
-            AFFECTED_VERSIONS,
-            COMPONENTS,
-            FIX_FOR_VERSIONS,
-            ISSUE_LINKS,
-            SUBTASKS,
-            LABELS,
-            VOTES,
-            WATCHES
-        );
-    }
-
-    /**
-     * @return a list of fields that could be chosen to copy their value.
-     */
-    public List<Field> getCopyToFields(){
-        List<Field> allFields = getAllFields();
-        allFields.removeAll(getNonCopyToFields());
-
-        return allFields;
-    }
-
-    public List<Field> getCopyToMultiFields(){
-        List<Field> allFields = getAllMultiEditableFields();
-        allFields.removeAll(getNonCopyToFields());
-
-        return allFields;
-    }
-
-    /**
-     * @return a list of fields that will be eliminated from getCopyToFields().
-     */
-    private List<Field> getNonCopyToFields(){
-        return asFields(
-                ATTACHMENT,
-                COMMENT,
-                CREATED,
-                TIMETRACKING,
-                AGGREGATE_TIME_ORIGINAL_ESTIMATE,
-                AGGREGATE_TIME_ESTIMATE,
-                AGGREGATE_PROGRESS,
-                AGGREGATE_TIME_SPENT,
-                ISSUE_KEY,
-                ISSUE_LINKS,
-                PROJECT,
-                STATUS,
-                SUBTASKS,
-                THUMBNAIL,
-                UPDATED,
-                VOTES,
-                WORKRATIO
-        );
-    }
-
-    /**
-     * @return a list of fields that could be chosen like required.
-     */
-    public List<Field> getRequirableFields(){
-        List<Field> allFields = getAllFields();
-
-        allFields.removeAll(getNonRequirableFields());
-
-        return allFields;
-    }
-
-    /**
-     * @return a list of fields that will be eliminated from getRequirableFields().
-     */
-    private List<Field> getNonRequirableFields(){
-        return asFields(
-                CREATED,
-                TIMETRACKING,
-                PROGRESS,
-                AGGREGATE_TIME_ORIGINAL_ESTIMATE,
-                AGGREGATE_PROGRESS,
-                ISSUE_KEY,
-                ISSUE_LINKS,
-                ISSUE_TYPE,
-                PROJECT,
-                STATUS,
-                SUBTASKS,
-                THUMBNAIL,
-                UPDATED,
-                VOTES,
-                WORKRATIO,
-                "worklog",
-                "aggregatetimeestimate",
-                "aggregatetimespent"
-        );
-    }
-
-    /**
-     * @return a list of fields that could be chosen in Value-Field Condition.
-     */
-    public List<Field> getValueFieldConditionFields(){
-        List<Field> allFields = getAllFields();
-
-        allFields.removeAll(getNonValueFieldConditionFields());
-        // Date fields are removed, because date comparison is not implemented yet. - See also ConditionCheckerFactory.
-        allFields.removeAll(getAllDateFields());
-
-        return allFields;
-    }
-
-    /**
-     * @return a list of fields that will be eliminated from getValueFieldConditionFields().
-     */
-    private List<Field> getNonValueFieldConditionFields(){
-        return asFields(
-                ATTACHMENT,
-                COMMENT,
-                CREATED,
-                ISSUE_KEY,
-                ISSUE_LINKS,
-                SUBTASKS,
-                THUMBNAIL,
-                TIMETRACKING,
-                UPDATED,
-                WORKRATIO
-        );
-    }
-
-    /**
-     * @param cal
-     *
-     * Clear the time part from a given Calendar.
-     *
-     */
-    public void clearCalendarTimePart(Calendar cal) {
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-    }
-
-    /**
-     * @param tsDate
-     * @return a String.
-     *
-     * It formats to a date nice.
-     */
-    public String getNiceDate(Timestamp tsDate){
-        Date timePerformed = new Date(tsDate.getTime());
-        return dateTimeFormatter.format(timePerformed);
-    }
-
-    /**
-     * Get comparator for sorting fields.
-     * @return
-     */
-    private Comparator<Field> getComparator() {
-        I18nHelper i18n = i18nHelper.getInstance(applicationProperties.getDefaultLocale());
-
-        return new NameComparatorEx(i18n);
-    }
-
-    /**
-     * Convert array of names into list of fields
-     * @param names
-     * @return
-     */
-    private List<Field> asFields(String ... names) {
-        List<Field> result = new ArrayList<Field>(names.length);
-
-        for (String name : names) {
-            result.add(fieldManager.getField(name));
-        }
-
-        return result;
-    }
+    return result;
+  }
 }
