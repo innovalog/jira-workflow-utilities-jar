@@ -7,10 +7,7 @@ import com.atlassian.jira.issue.CustomFieldManager;
 import com.atlassian.jira.issue.Issue;
 import com.atlassian.jira.issue.IssueFieldConstants;
 import com.atlassian.jira.issue.customfields.CustomFieldType;
-import com.atlassian.jira.issue.customfields.impl.DateCFType;
-import com.atlassian.jira.issue.customfields.impl.DateTimeCFType;
-import com.atlassian.jira.issue.customfields.impl.ImportIdLinkCFType;
-import com.atlassian.jira.issue.customfields.impl.ReadOnlyCFType;
+import com.atlassian.jira.issue.customfields.impl.*;
 import com.atlassian.jira.issue.fields.*;
 import com.atlassian.jira.issue.fields.config.FieldConfig;
 import com.atlassian.jira.issue.fields.layout.field.FieldLayout;
@@ -116,6 +113,25 @@ public class FieldCollectionsUtils {
 
         return new ArrayList<Field>(allFields);
     }
+
+    public List<Field> getAllMultiEditableFields(){
+        Set<Field> allFields = new TreeSet<Field>(getComparator());
+
+        try {
+            final Set<NavigableField> fields = fieldManager.getAllAvailableNavigableFields();
+            allFields.addAll(getMultiSystemFields());
+            for (Field f : fields) {
+                if (fieldManager.isCustomField(f) && customFieldManager.getCustomFieldObject(f.getId()).getCustomFieldType() instanceof AbstractMultiCFType)
+                    allFields.add(f);
+            }
+        } catch (FieldException e) {
+            log.error("Unable to load navigable fields", e);
+        }
+
+        return new ArrayList<Field>(allFields);
+    }
+
+
 
     /**
      * @param allFields list of fields to be sorted.
@@ -286,11 +302,31 @@ public class FieldCollectionsUtils {
         );
     }
 
+    private List<Field> getMultiSystemFields(){
+        return asFields(
+            AFFECTED_VERSIONS,
+            COMPONENTS,
+            FIX_FOR_VERSIONS,
+            ISSUE_LINKS,
+            SUBTASKS,
+            LABELS,
+            VOTES,
+            WATCHES
+        );
+    }
+
     /**
      * @return a list of fields that could be chosen to copy their value.
      */
     public List<Field> getCopyToFields(){
         List<Field> allFields = getAllFields();
+        allFields.removeAll(getNonCopyToFields());
+
+        return allFields;
+    }
+
+    public List<Field> getCopyToMultiFields(){
+        List<Field> allFields = getAllMultiEditableFields();
         allFields.removeAll(getNonCopyToFields());
 
         return allFields;
