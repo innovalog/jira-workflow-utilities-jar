@@ -121,7 +121,10 @@ public class FieldCollectionsUtils {
       final Set<NavigableField> fields = fieldManager.getAllAvailableNavigableFields();
       allFields.addAll(getMultiSystemFields());
       for (Field f : fields) {
-        if (fieldManager.isCustomField(f) && customFieldManager.getCustomFieldObject(f.getId()).getCustomFieldType() instanceof AbstractMultiCFType)
+        if (fieldManager.isCustomField(f) && (
+            customFieldManager.getCustomFieldObject(f.getId()).getCustomFieldType() instanceof AbstractMultiCFType
+                || customFieldManager.getCustomFieldObject(f.getId()).getCustomFieldType() instanceof LabelsCFType
+        ))
           allFields.add(f);
       }
     } catch (FieldException e) {
