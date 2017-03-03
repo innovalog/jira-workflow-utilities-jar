@@ -373,6 +373,8 @@ public class WorkflowUtils {
           retVal = aggregateTimeTrackingCalculatorFactory.getCalculator(issue).getAggregates(issue).getOriginalEstimate();
         } else if (fieldId.equals(IssueFieldConstants.ASSIGNEE)) {
           retVal = issue.getClass().getMethod("getAssigneeUser").invoke(issue);
+        } else if (fieldId.equals(IssueFieldConstants.CREATOR)) {
+          retVal = issue.getClass().getMethod("getCreator").invoke(issue);
         } else if (fieldId.equals(IssueFieldConstants.REPORTER)) {
           retVal = issue.getClass().getMethod("getReporterUser").invoke(issue);
         } else if (fieldId.equals(IssueFieldConstants.DESCRIPTION)) {
